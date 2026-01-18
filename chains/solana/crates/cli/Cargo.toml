@@ -20,5 +20,5 @@ clap.workspace = true
 tokio.workspace = true
 eyre.workspace = true
 serde_json.workspace = true
-tabled = "0.15"
+tabled = "0.20"
 openssl.workspace = true
