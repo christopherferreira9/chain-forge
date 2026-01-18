@@ -113,7 +113,7 @@ yarn build
 yarn tsc --noEmit
 ```
 
-**Important**: The `dist/` directory is gitignored. Examples that depend on `@chain-forge/solana` via `file:` references will have different Yarn hashes between local and CI builds. This is expected and why the example install in CI doesn't use `--immutable`.
+**Important**: The `dist/` directory is gitignored. Examples that depend on `@chain-forge/solana` via `file:` references will have different Yarn hashes between local and CI builds. This is expected and why the example install in CI disables Yarn's hardened mode with `YARN_ENABLE_HARDENED_MODE=0`.
 
 ### Examples
 

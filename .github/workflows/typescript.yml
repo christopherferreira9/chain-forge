@@ -104,6 +104,8 @@ jobs:
       - name: Install example dependencies
         working-directory: examples/typescript-basic
         run: yarn install
+        env:
+          YARN_ENABLE_HARDENED_MODE: 0
 
       - name: Build example
         working-directory: examples/typescript-basic
