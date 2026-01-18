@@ -230,9 +230,12 @@ All CI checks must pass. Clippy runs with `-D warnings` (treats warnings as erro
 
 Security configuration in `.cargo/audit.toml`:
 
-- **Ignored vulnerability**: `RUSTSEC-2022-0093` (ed25519-dalek 1.0.1) - This comes from Solana SDK 2.x which hasn't migrated to ed25519-dalek 2.x yet. Not a concern for local development tools.
+- **Ignored vulnerabilities**:
+  - `RUSTSEC-2022-0093` (ed25519-dalek 1.0.1) - From Solana SDK, can't upgrade without breaking compatibility
+  - `RUSTSEC-2024-0344` (curve25519-dalek 3.2.0) - Transitive from ed25519-dalek, timing attacks not relevant for local dev
+  - `RUSTSEC-2021-0145` (atty 0.2.14) - Low severity, terminal detection only
 - **Ignored unmaintained warnings**: Several transitive dependencies from Solana SDK are unmaintained but low-risk for a development tool (atty, bincode, derivative, number_prefix, paste, proc-macro-error).
-- **Patched**: `curve25519-dalek` is patched to 4.1.3 via `[patch.crates-io]` to fix timing variability (RUSTSEC-2024-0344).
+- All ignored issues are due to Solana SDK dependencies and will be resolved when Solana upgrades to ed25519-dalek 2.x.
 
 ## Dependencies
 
