@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [18.20.5, 20.18.0]
 
     steps:
       - name: Checkout code
@@ -60,7 +60,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 20.18.0
 
       - name: Enable Corepack
         run: corepack enable
@@ -90,7 +90,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20.x
+          node-version: 20.18.0
 
       - name: Enable Corepack
         run: corepack enable
@@ -103,7 +103,7 @@ jobs:
 
       - name: Install example dependencies
         working-directory: examples/typescript-basic
-        run: yarn install
+        run: yarn install --immutable
 
       - name: Build example
         working-directory: examples/typescript-basic
