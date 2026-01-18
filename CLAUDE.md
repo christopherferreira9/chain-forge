@@ -219,12 +219,20 @@ Profiles support different environments (e.g., `[solana.default]`, `[solana.devn
 
 GitHub Actions workflows in `.github/workflows/`:
 
-- **ci.yml**: Runs tests, formatting, clippy, builds on Ubuntu/macOS/Windows
-- **typescript.yml**: Builds TypeScript package and examples
-- **security.yml**: Security audits
-- **release.yml**: Release automation
+- **ci.yml**: Runs tests, formatting, clippy, builds on Linux only (free runners)
+- **typescript.yml**: Builds TypeScript package and examples on Linux
+- **security.yml**: Security audits with cargo-audit
+- **release.yml**: Release automation (Linux binaries only)
 
 All CI checks must pass. Clippy runs with `-D warnings` (treats warnings as errors).
+
+### Security Audits
+
+Security configuration in `.cargo/audit.toml`:
+
+- **Ignored vulnerability**: `RUSTSEC-2022-0093` (ed25519-dalek 1.0.1) - This comes from Solana SDK 2.x which hasn't migrated to ed25519-dalek 2.x yet. Not a concern for local development tools.
+- **Ignored unmaintained warnings**: Several transitive dependencies from Solana SDK are unmaintained but low-risk for a development tool (atty, bincode, derivative, number_prefix, paste, proc-macro-error).
+- **Patched**: `curve25519-dalek` is patched to 4.1.3 via `[patch.crates-io]` to fix timing variability (RUSTSEC-2024-0344).
 
 ## Dependencies
 

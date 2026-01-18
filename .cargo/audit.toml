@@ -1,0 +1,28 @@
+# Cargo audit configuration for Chain Forge
+# https://github.com/rustsec/rustsec/blob/main/cargo-audit/audit.toml.example
+
+[advisories]
+# Ignore advisories for specific issues
+ignore = [
+    # ed25519-dalek 1.0.1 - Double Public Key Signing Function Oracle Attack
+    # REASON: This comes from Solana SDK 2.x which still uses ed25519-dalek 1.x internally.
+    # Forcing ed25519-dalek 2.x breaks compatibility with Solana.
+    # This will be resolved when Solana SDK updates to ed25519-dalek 2.x.
+    # NOT a concern for local development tool - this attack requires specific misuse patterns.
+    "RUSTSEC-2022-0093",
+]
+
+# Ignore unmaintained crates that are transitive dependencies
+# These are low-risk for a local development tool
+ignore-unmaintained = [
+    "atty",           # From Solana's env_logger (used only for terminal detection)
+    "bincode",        # From Solana SDK (serialization)
+    "derivative",     # From ark-* (Solana's BN254 implementation)
+    "number_prefix",  # From indicatif (Solana client progress bars)
+    "paste",          # From ark-ff (Solana's BN254 implementation)
+    "proc-macro-error", # From tabled_derive (compile-time only, no runtime impact)
+]
+
+[database]
+# Fetch advisories from RustSec advisory database
+url = "https://github.com/RustSec/advisory-db"
