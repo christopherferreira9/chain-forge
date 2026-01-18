@@ -103,7 +103,7 @@ jobs:
 
       - name: Install example dependencies
         working-directory: examples/typescript-basic
-        run: yarn install --immutable
+        run: yarn install
 
       - name: Build example
         working-directory: examples/typescript-basic
