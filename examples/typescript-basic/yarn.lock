@@ -14,10 +14,10 @@ __metadata:
 
 "@chain-forge/solana@file:../../npm/@chain-forge/solana::locator=chain-forge-example-basic%40workspace%3A.":
   version: 0.1.0
-  resolution: "@chain-forge/solana@file:../../npm/@chain-forge/solana#../../npm/@chain-forge/solana::hash=0d9e38&locator=chain-forge-example-basic%40workspace%3A."
+  resolution: "@chain-forge/solana@file:../../npm/@chain-forge/solana#../../npm/@chain-forge/solana::hash=c0b0ee&locator=chain-forge-example-basic%40workspace%3A."
   peerDependencies:
     "@solana/web3.js": ^1.87.0
-  checksum: c090c47d68e052571971231420bd8a5f31adb750cb15aa8195bdafbc9c0e9f48c48c6abd8f88a58bd22539f0cc4f28d28e4aace0ff2d7aef2ee5570459aec859
+  checksum: d06691d4cd9d27e594f38c69a5a9e4e1b2973b6c28f977ad6ffbc20ea7bcbb84ca7c1b910fe25fda76d67e7653523899118c3a1b00542fd79fbe7917569e1804
   languageName: node
   linkType: hard
 
