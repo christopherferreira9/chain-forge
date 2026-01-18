@@ -22,17 +22,15 @@ ignore = [
     # REASON: From Solana's env_logger, used only for terminal detection.
     # Low severity, only affects specific architectures, no security impact for this tool.
     "RUSTSEC-2021-0145",
-]
 
-# Ignore unmaintained crates that are transitive dependencies
-# These are low-risk for a local development tool
-ignore-unmaintained = [
-    "atty",           # From Solana's env_logger (used only for terminal detection)
-    "bincode",        # From Solana SDK (serialization)
-    "derivative",     # From ark-* (Solana's BN254 implementation)
-    "number_prefix",  # From indicatif (Solana client progress bars)
-    "paste",          # From ark-ff (Solana's BN254 implementation)
-    "proc-macro-error", # From tabled_derive (compile-time only, no runtime impact)
+    # Unmaintained crate warnings - all from Solana SDK transitive dependencies
+    # These are informational warnings, not vulnerabilities
+    "RUSTSEC-2024-0375",  # atty - unmaintained (from Solana's env_logger)
+    "RUSTSEC-2025-0141",  # bincode - unmaintained (from Solana SDK)
+    "RUSTSEC-2024-0388",  # derivative - unmaintained (from ark-* in Solana)
+    "RUSTSEC-2025-0119",  # number_prefix - unmaintained (from indicatif in Solana)
+    "RUSTSEC-2024-0436",  # paste - unmaintained (from ark-ff in Solana)
+    "RUSTSEC-2024-0370",  # proc-macro-error - unmaintained (from tabled_derive)
 ]
 
 [database]
