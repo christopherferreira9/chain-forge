@@ -51,6 +51,33 @@ cargo fmt --all -- --check
 
 # Run clippy (must pass with no warnings)
 cargo clippy --workspace --all-features -- -D warnings
+
+# Run security audit
+cargo audit
+# Or use make: make audit (auto-installs cargo-audit if needed)
+```
+
+### Using Make Commands
+
+The project includes a Makefile for common development tasks:
+
+```bash
+# Install development tools (cargo-audit, etc.)
+make install-tools
+
+# Run all checks (format, lint, test, audit)
+make check-all
+
+# Individual checks
+make format    # Format code
+make lint      # Run clippy
+make test      # Run tests
+make audit     # Run security audit
+make build     # Build in release mode
+
+# TypeScript
+make ts-build  # Build TypeScript package
+make ts-test   # Run TypeScript example
 ```
 
 ### Documentation
@@ -85,6 +112,8 @@ yarn build
 # Type check only
 yarn tsc --noEmit
 ```
+
+**Important**: The `dist/` directory is gitignored. Examples that depend on `@chain-forge/solana` via `file:` references will have different Yarn hashes between local and CI builds. This is expected and why the example install in CI disables Yarn's hardened mode with `YARN_ENABLE_HARDENED_MODE=0`.
 
 ### Examples
 
@@ -219,12 +248,25 @@ Profiles support different environments (e.g., `[solana.default]`, `[solana.devn
 
 GitHub Actions workflows in `.github/workflows/`:
 
-- **ci.yml**: Runs tests, formatting, clippy, builds on Ubuntu/macOS/Windows
-- **typescript.yml**: Builds TypeScript package and examples
-- **security.yml**: Security audits
-- **release.yml**: Release automation
+- **ci.yml**: Runs tests, formatting, clippy, builds on Linux only (free runners)
+- **typescript.yml**: Builds TypeScript package and examples on Linux
+- **security.yml**: Security audits with cargo-audit
+- **release.yml**: Release automation (Linux binaries only)
 
 All CI checks must pass. Clippy runs with `-D warnings` (treats warnings as errors).
+
+**Concurrency Control**: All workflows use concurrency groups to cancel outdated runs when new commits are pushed to the same branch. This saves CI minutes and provides faster feedback.
+
+### Security Audits
+
+Security configuration in `.cargo/audit.toml`:
+
+- **Ignored vulnerabilities**:
+  - `RUSTSEC-2022-0093` (ed25519-dalek 1.0.1) - From Solana SDK, can't upgrade without breaking compatibility
+  - `RUSTSEC-2024-0344` (curve25519-dalek 3.2.0) - Transitive from ed25519-dalek, timing attacks not relevant for local dev
+  - `RUSTSEC-2021-0145` (atty 0.2.14) - Low severity, terminal detection only
+- **Ignored unmaintained warnings**: Several transitive dependencies from Solana SDK are unmaintained but low-risk for a development tool (atty, bincode, derivative, number_prefix, paste, proc-macro-error).
+- All ignored issues are due to Solana SDK dependencies and will be resolved when Solana upgrades to ed25519-dalek 2.x.
 
 ## Dependencies
 

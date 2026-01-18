@@ -41,6 +41,9 @@ bs58 = "0.5"
 # OpenSSL - vendored for Windows compatibility
 openssl = { version = "0.10", features = ["vendored"] }
 
+# CLI utilities
+tabled = "0.16"
+
 # Workspace crates
 chain-forge-common = { path = "crates/common" }
 chain-forge-config = { path = "crates/config" }

@@ -12,14 +12,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@chain-forge/solana@file:../../npm/@chain-forge/solana::locator=chain-forge-example-basic%40workspace%3A.":
-  version: 0.1.0
-  resolution: "@chain-forge/solana@file:../../npm/@chain-forge/solana#../../npm/@chain-forge/solana::hash=0d9e38&locator=chain-forge-example-basic%40workspace%3A."
+"@chain-forge/solana@portal:../../npm/@chain-forge/solana::locator=chain-forge-example-basic%40workspace%3A.":
+  version: 0.0.0-use.local
+  resolution: "@chain-forge/solana@portal:../../npm/@chain-forge/solana::locator=chain-forge-example-basic%40workspace%3A."
   peerDependencies:
     "@solana/web3.js": ^1.87.0
-  checksum: c090c47d68e052571971231420bd8a5f31adb750cb15aa8195bdafbc9c0e9f48c48c6abd8f88a58bd22539f0cc4f28d28e4aace0ff2d7aef2ee5570459aec859
   languageName: node
-  linkType: hard
+  linkType: soft
 
 "@cspotcode/source-map-support@npm:^0.8.0":
   version: 0.8.1
@@ -416,7 +415,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "chain-forge-example-basic@workspace:."
   dependencies:
-    "@chain-forge/solana": "file:../../npm/@chain-forge/solana"
+    "@chain-forge/solana": "portal:../../npm/@chain-forge/solana"
     "@solana/web3.js": "npm:^1.87.0"
     "@types/node": "npm:^20.0.0"
     ts-node: "npm:^10.9.0"
