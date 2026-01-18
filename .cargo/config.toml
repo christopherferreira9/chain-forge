@@ -1,0 +1,8 @@
+# Cargo configuration for Chain Forge development
+
+[alias]
+# Audit with configuration
+audit-check = "audit"
+
+# Run all checks (format, clippy, test, audit)
+check-all = "run-script check-all"

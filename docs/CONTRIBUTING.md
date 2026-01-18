@@ -22,6 +22,9 @@ Be respectful and inclusive. We want Chain Forge to be a welcoming project for e
 git clone https://github.com/yourusername/chain-forge
 cd chain-forge
 
+# Install development tools (cargo-audit, etc.)
+make install-tools
+
 # Build the project
 cargo build --workspace
 
@@ -70,6 +73,15 @@ cargo fmt --all
 
 # Run clippy
 cargo clippy --workspace --all-features -- -D warnings
+
+# Run security audit
+cargo audit
+```
+
+Or use make for all checks:
+
+```bash
+make check-all
 ```
 
 ### 5. Commit Changes

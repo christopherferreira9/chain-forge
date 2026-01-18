@@ -36,3 +36,5 @@ ignore = [
 [database]
 # Fetch advisories from RustSec advisory database
 url = "https://github.com/RustSec/advisory-db"
+# Accept advisories that are up to 90 days stale
+stale = true

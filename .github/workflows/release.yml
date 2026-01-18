@@ -5,6 +5,12 @@ on:
     tags:
       - 'v*'
 
+# For releases, we don't want to cancel in-progress builds
+# Each tag should get its own complete release
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 permissions:
   contents: write
 

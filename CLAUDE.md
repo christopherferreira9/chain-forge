@@ -51,6 +51,33 @@ cargo fmt --all -- --check
 
 # Run clippy (must pass with no warnings)
 cargo clippy --workspace --all-features -- -D warnings
+
+# Run security audit
+cargo audit
+# Or use make: make audit (auto-installs cargo-audit if needed)
+```
+
+### Using Make Commands
+
+The project includes a Makefile for common development tasks:
+
+```bash
+# Install development tools (cargo-audit, etc.)
+make install-tools
+
+# Run all checks (format, lint, test, audit)
+make check-all
+
+# Individual checks
+make format    # Format code
+make lint      # Run clippy
+make test      # Run tests
+make audit     # Run security audit
+make build     # Build in release mode
+
+# TypeScript
+make ts-build  # Build TypeScript package
+make ts-test   # Run TypeScript example
 ```
 
 ### Documentation
@@ -225,6 +252,8 @@ GitHub Actions workflows in `.github/workflows/`:
 - **release.yml**: Release automation (Linux binaries only)
 
 All CI checks must pass. Clippy runs with `-D warnings` (treats warnings as errors).
+
+**Concurrency Control**: All workflows use concurrency groups to cancel outdated runs when new commits are pushed to the same branch. This saves CI minutes and provides faster feedback.
 
 ### Security Audits
 

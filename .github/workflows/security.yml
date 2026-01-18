@@ -9,6 +9,12 @@ on:
     # Run daily at 2am UTC
     - cron: '0 2 * * *'
 
+# Cancel in-progress runs when a new workflow with the same group name starts
+# For scheduled runs, allow them to complete (different group per day)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name == 'schedule' && github.run_id || '' }}
+  cancel-in-progress: ${{ github.event_name != 'schedule' }}
+
 jobs:
   audit:
     name: Cargo Audit
