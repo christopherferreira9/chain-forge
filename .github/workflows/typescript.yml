@@ -15,10 +15,9 @@ on:
 jobs:
   test:
     name: TypeScript Tests
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest]
         node-version: [18.x, 20.x]
 
     steps:

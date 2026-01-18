@@ -11,54 +11,30 @@ permissions:
 jobs:
   build-binaries:
     name: Build Binaries
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            artifact_name: cf-solana
-            asset_name: cf-solana-linux-x86_64
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            artifact_name: cf-solana
-            asset_name: cf-solana-macos-x86_64
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            artifact_name: cf-solana
-            asset_name: cf-solana-macos-aarch64
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            artifact_name: cf-solana.exe
-            asset_name: cf-solana-windows-x86_64.exe
-
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: ${{ matrix.target }}
 
-      - name: Build binary
-        run: cargo build --release --target ${{ matrix.target }} -p chain-forge-solana-cli
+      - name: Build binary (Linux x86_64)
+        run: cargo build --release --target x86_64-unknown-linux-gnu -p chain-forge-solana-cli
 
-      - name: Strip binary (Linux/macOS)
-        if: matrix.os != 'windows-latest'
-        run: strip target/${{ matrix.target }}/release/${{ matrix.artifact_name }}
+      - name: Strip binary
+        run: strip target/x86_64-unknown-linux-gnu/release/cf-solana
 
-      - name: Rename binary
-        shell: bash
+      - name: Prepare release artifacts
         run: |
           mkdir -p release
-          cp target/${{ matrix.target }}/release/${{ matrix.artifact_name }} release/${{ matrix.asset_name }}
+          cp target/x86_64-unknown-linux-gnu/release/cf-solana release/cf-solana-linux-x86_64
 
       - name: Upload binary
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.asset_name }}
-          path: release/${{ matrix.asset_name }}
+          name: cf-solana-linux-x86_64
+          path: release/cf-solana-linux-x86_64
 
   create-release:
     name: Create Release
