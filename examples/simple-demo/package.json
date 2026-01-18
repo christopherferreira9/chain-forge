@@ -14,7 +14,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@chain-forge/solana": "file:../../npm/@chain-forge/solana",
+    "@chain-forge/solana": "portal:../../npm/@chain-forge/solana",
     "@solana/web3.js": "^1.87.0"
   },
   "packageManager": "yarn@4.0.2"
