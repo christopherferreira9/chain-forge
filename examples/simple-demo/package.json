@@ -1,0 +1,21 @@
+{
+  "name": "chain-forge-simple-demo",
+  "version": "1.0.0",
+  "description": "Simple demo showing Chain Forge in action",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "keywords": [
+    "solana",
+    "chain-forge",
+    "demo"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@chain-forge/solana": "file:../../npm/@chain-forge/solana",
+    "@solana/web3.js": "^1.87.0"
+  },
+  "packageManager": "yarn@4.0.2"
+}

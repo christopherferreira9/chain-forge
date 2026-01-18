@@ -1,0 +1,29 @@
+{
+  "name": "chain-forge-example-basic",
+  "version": "1.0.0",
+  "description": "Basic example of using Chain Forge with TypeScript",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "mnemonic": "ts-node src/mnemonic-example.ts"
+  },
+  "packageManager": "yarn@4.0.2",
+  "keywords": [
+    "solana",
+    "chain-forge",
+    "example"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@chain-forge/solana": "file:../../npm/@chain-forge/solana",
+    "@solana/web3.js": "^1.87.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
+  }
+}

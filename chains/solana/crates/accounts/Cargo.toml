@@ -1,0 +1,23 @@
+[package]
+name = "chain-forge-solana-accounts"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+chain-forge-common.workspace = true
+chain-forge-config.workspace = true
+solana-sdk.workspace = true
+bip39.workspace = true
+ed25519-dalek.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+eyre.workspace = true
+bs58.workspace = true
+rand.workspace = true
+hmac = "0.12"
+sha2 = "0.10"
+
+[dev-dependencies]
+tempfile = "3.8"

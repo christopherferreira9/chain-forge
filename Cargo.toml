@@ -1,0 +1,50 @@
+[workspace]
+members = [
+    "crates/common",
+    "crates/config",
+    "crates/cli-utils",
+    "chains/solana/crates/cli",
+    "chains/solana/crates/core",
+    "chains/solana/crates/accounts",
+    "chains/solana/crates/rpc",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+rust-version = "1.75"
+authors = ["Chain Forge Contributors"]
+repository = "https://github.com/yourusername/chain-forge"
+
+[workspace.dependencies]
+# Common dependencies
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+toml = "0.8"
+eyre = "0.6"
+thiserror = "1.0"
+clap = { version = "4", features = ["derive", "env"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+rand = "0.8"
+
+# Solana-specific
+solana-sdk = "2.0"
+solana-client = "2.0"
+bip39 = "2.0"
+ed25519-dalek = "2.1"
+bs58 = "0.5"
+
+# OpenSSL - vendored for Windows compatibility
+openssl = { version = "0.10", features = ["vendored"] }
+
+# Workspace crates
+chain-forge-common = { path = "crates/common" }
+chain-forge-config = { path = "crates/config" }
+chain-forge-cli-utils = { path = "crates/cli-utils" }
+chain-forge-solana-accounts = { path = "chains/solana/crates/accounts" }
+chain-forge-solana-rpc = { path = "chains/solana/crates/rpc" }
+chain-forge-solana-core = { path = "chains/solana/crates/core" }

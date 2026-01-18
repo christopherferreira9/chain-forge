@@ -1,0 +1,13 @@
+[package]
+name = "chain-forge-cli-utils"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+chain-forge-common.workspace = true
+clap.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tabled = "0.15"

@@ -1,0 +1,41 @@
+# Chain Forge Configuration Example
+#
+# Copy this file to chain-forge.toml and customize as needed
+# Place it in your project directory or home directory
+
+# Solana Configuration
+[solana.default]
+# RPC URL for the validator
+rpc_url = "http://localhost:8899"
+
+# Number of accounts to generate
+accounts = 10
+
+# Initial balance for each account in SOL
+initial_balance = 100.0
+
+# RPC port for the validator
+port = 8899
+
+# Additional profiles for different environments
+[solana.devnet]
+rpc_url = "https://api.devnet.solana.com"
+accounts = 5
+initial_balance = 10.0
+
+[solana.testnet]
+rpc_url = "https://api.testnet.solana.com"
+
+# Future: Bitcoin Configuration
+# [bitcoin.default]
+# rpc_url = "http://localhost:18443"
+# accounts = 10
+# initial_balance = 1.0
+# network = "regtest"
+
+# Future: Ethereum Configuration
+# [ethereum.default]
+# rpc_url = "http://localhost:8545"
+# accounts = 10
+# initial_balance = 100.0
+# chain_id = 1337

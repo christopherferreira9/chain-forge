@@ -1,0 +1,24 @@
+[package]
+name = "chain-forge-solana-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "cf-solana"
+path = "src/main.rs"
+
+[dependencies]
+chain-forge-common.workspace = true
+chain-forge-config.workspace = true
+chain-forge-cli-utils.workspace = true
+chain-forge-solana-core.workspace = true
+chain-forge-solana-accounts.workspace = true
+chain-forge-solana-rpc.workspace = true
+clap.workspace = true
+tokio.workspace = true
+eyre.workspace = true
+serde_json.workspace = true
+tabled = "0.15"
+openssl.workspace = true
