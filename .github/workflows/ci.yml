@@ -195,8 +195,11 @@ jobs:
       - name: Generate coverage
         run: cargo tarpaulin --workspace --all-features --out xml
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./cobertura.xml
-          fail_ci_if_error: false
+      # Codecov upload removed - requires paid account for private repos
+      # To enable: uncomment below and add CODECOV_TOKEN secret
+      # - name: Upload coverage to Codecov
+      #   uses: codecov/codecov-action@v4
+      #   with:
+      #     files: ./cobertura.xml
+      #     fail_ci_if_error: false
+      #     token: ${{ secrets.CODECOV_TOKEN }}
