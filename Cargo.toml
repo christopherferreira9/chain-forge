@@ -23,7 +23,7 @@ repository = "https://github.com/yourusername/chain-forge"
 tokio = { version = "1", features = ["full"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-toml = "0.8"
+toml = "0.9"
 eyre = "0.6"
 thiserror = "1.0"
 clap = { version = "4", features = ["derive", "env"] }
