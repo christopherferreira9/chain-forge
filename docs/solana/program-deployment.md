@@ -215,8 +215,15 @@ async function main() {
 main().catch(console.error);
 ```
 
+## Sample Program
+
+Chain Forge includes a ready-to-use sample program (`hello_chain_forge`) in the examples directory. This program demonstrates basic Solana concepts and is perfect for testing deployments.
+
+See the [Program Deployment Example](../examples/program-deployment) for details on building and deploying the sample program.
+
 ## See Also
 
+- [Program Deployment Example](../examples/program-deployment)
 - [API Reference](../api/overview)
 - [TypeScript Examples](../examples/typescript)
 - [Account Management](./accounts)

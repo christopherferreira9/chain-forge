@@ -12,6 +12,47 @@ This example demonstrates how to deploy Solana programs using Chain Forge.
 
 The full example is available at `examples/program-deployment/` in the repository.
 
+## Included Sample Program
+
+The example includes a ready-to-use sample program called **`hello_chain_forge`** located at `examples/program-deployment/program/`.
+
+### About the Program
+
+This is a simple demonstration program that shows basic Solana program structure:
+
+- Processing different instruction types
+- Logging messages to the validator
+- Reading and modifying account data (counter)
+
+### Supported Instructions
+
+| Instruction | Byte | Description |
+|------------|------|-------------|
+| Initialize | `0` | Sets the counter to 0 in the provided account |
+| Increment | `1` | Adds 1 to the counter in the provided account |
+| Hello | `2` (or any other) | Logs "Hello, Chain Forge!" and account info |
+
+### Building the Sample Program
+
+```bash
+cd examples/program-deployment
+
+# Build the program
+yarn build:program
+
+# Output: program/target/deploy/hello_chain_forge.so
+```
+
+### Deploying and Running
+
+```bash
+# Deploy the sample program
+yarn deploy:example
+
+# Or with mnemonic for reproducible accounts
+yarn deploy:example:mnemonic
+```
+
 ## Quick Start
 
 ### 1. Deploy with Default Accounts
