@@ -3,10 +3,10 @@ import { promises as fs } from 'fs';
 import { homedir } from 'os';
 import { join, dirname } from 'path';
 import { existsSync } from 'fs';
-import { SolanaAccount, SolanaClientConfig } from './types';
+import { SolanaAccount, SolanaClientConfig, DeployProgramOptions, DeployProgramResult } from './types';
 
-// Import Solana web3.js types and values
-import type { Connection, PublicKey } from '@solana/web3.js';
+// Import Solana web3.js types
+import type { Connection, PublicKey, Keypair } from '@solana/web3.js';
 
 /**
  * Find the cf-solana binary
@@ -258,5 +258,161 @@ export class SolanaClient {
    */
   getRpcUrl(): string {
     return this.config.rpcUrl;
+  }
+
+  /**
+   * Get a Keypair from a generated account
+   * @param accountIndex - Index of the account (default: 0)
+   * @returns Keypair instance
+   */
+  async getKeypair(accountIndex: number = 0): Promise<Keypair> {
+    const accounts = await this.getAccounts();
+
+    if (accountIndex < 0 || accountIndex >= accounts.length) {
+      throw new Error(`Invalid account index ${accountIndex}. Available accounts: 0-${accounts.length - 1}`);
+    }
+
+    const account = accounts[accountIndex];
+    const web3 = require('@solana/web3.js');
+    const { Keypair: SolanaKeypair } = web3;
+
+    return SolanaKeypair.fromSecretKey(new Uint8Array(account.secretKey));
+  }
+
+  /**
+   * Deploy a Solana program from a compiled .so file
+   *
+   * Uses the `solana program deploy` CLI command which handles the modern
+   * Upgradeable BPF Loader automatically.
+   *
+   * @param programPath - Path to the compiled program (.so file)
+   * @param options - Deployment options
+   * @returns Deployment result with program ID and transaction signature
+   *
+   * @example
+   * ```typescript
+   * const client = new SolanaClient();
+   * await client.start();
+   *
+   * // Deploy using the first account as payer
+   * const result = await client.deployProgram('./target/deploy/my_program.so');
+   * console.log('Program ID:', result.programId);
+   *
+   * // Deploy using a specific account
+   * const result2 = await client.deployProgram('./program.so', { payerIndex: 1 });
+   * ```
+   */
+  async deployProgram(
+    programPath: string,
+    options: DeployProgramOptions = {}
+  ): Promise<DeployProgramResult> {
+    const { payerIndex = 0, programKeypair } = options;
+
+    // Read the program binary to get size
+    const programData = await fs.readFile(programPath);
+    const programSize = programData.length;
+
+    // Get payer account
+    const accounts = await this.getAccounts();
+    if (payerIndex < 0 || payerIndex >= accounts.length) {
+      throw new Error(`Invalid payer index ${payerIndex}. Available accounts: 0-${accounts.length - 1}`);
+    }
+    const payerAccount = accounts[payerIndex];
+
+    // Create temporary keypair file for the payer
+    const tmpDir = join(homedir(), '.chain-forge', 'tmp');
+    await fs.mkdir(tmpDir, { recursive: true });
+    const keypairPath = join(tmpDir, `keypair-${Date.now()}.json`);
+
+    try {
+      // Write payer keypair to temp file (Solana CLI format)
+      await fs.writeFile(keypairPath, JSON.stringify(Array.from(payerAccount.secretKey)));
+
+      // Build solana program deploy command
+      const args = [
+        'program',
+        'deploy',
+        programPath,
+        '--keypair', keypairPath,
+        '--url', this.config.rpcUrl,
+        '--output', 'json',
+      ];
+
+      // If a program keypair is provided, save it and use it
+      let programKeypairPath: string | null = null;
+      if (programKeypair) {
+        programKeypairPath = join(tmpDir, `program-keypair-${Date.now()}.json`);
+        await fs.writeFile(programKeypairPath, JSON.stringify(Array.from(programKeypair)));
+        args.push('--program-id', programKeypairPath);
+      }
+
+      // Execute solana program deploy
+      const result = await this.executeSolanaCommand(args);
+
+      // Clean up program keypair if created
+      if (programKeypairPath) {
+        await fs.unlink(programKeypairPath).catch(() => {});
+      }
+
+      // Parse the JSON output
+      let deployResult: { programId?: string; signature?: string };
+      try {
+        deployResult = JSON.parse(result);
+      } catch {
+        // Try to extract program ID from text output
+        const programIdMatch = result.match(/Program Id: ([A-Za-z0-9]+)/);
+        if (programIdMatch) {
+          deployResult = { programId: programIdMatch[1] };
+        } else {
+          throw new Error(`Failed to parse deployment result: ${result}`);
+        }
+      }
+
+      if (!deployResult.programId) {
+        throw new Error(`Deployment failed: ${result}`);
+      }
+
+      return {
+        programId: deployResult.programId,
+        signature: deployResult.signature || 'deployment-complete',
+        payer: payerAccount.publicKey,
+        programSize,
+      };
+    } finally {
+      // Clean up keypair file
+      await fs.unlink(keypairPath).catch(() => {});
+    }
+  }
+
+  /**
+   * Execute a solana CLI command and return the output
+   */
+  private executeSolanaCommand(args: string[]): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const process = spawn('solana', args, { stdio: 'pipe' });
+
+      let stdout = '';
+      let stderr = '';
+
+      process.stdout?.on('data', (data: Buffer) => {
+        stdout += data.toString();
+      });
+
+      process.stderr?.on('data', (data: Buffer) => {
+        stderr += data.toString();
+      });
+
+      process.on('error', (error: Error) => {
+        reject(new Error(`Failed to execute solana command: ${error.message}`));
+      });
+
+      process.on('close', (code: number | null) => {
+        if (code === 0) {
+          resolve(stdout);
+        } else {
+          reject(new Error(`Solana command failed (exit code ${code}): ${stderr || stdout}`));
+        }
+      });
+    });
   }
 }

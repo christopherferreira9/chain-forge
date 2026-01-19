@@ -1,0 +1,34 @@
+{
+  "name": "chain-forge-program-deployment",
+  "version": "1.0.0",
+  "description": "Example of deploying Solana programs using Chain Forge",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "build:program": "cd program && cargo build-sbf",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "deploy": "ts-node src/deploy.ts",
+    "deploy:mnemonic": "ts-node src/deploy-with-mnemonic.ts",
+    "deploy:example": "ts-node src/deploy.ts ./program/target/deploy/hello_chain_forge.so",
+    "deploy:example:mnemonic": "ts-node src/deploy-with-mnemonic.ts ./program/target/deploy/hello_chain_forge.so"
+  },
+  "packageManager": "yarn@4.0.2",
+  "keywords": [
+    "solana",
+    "chain-forge",
+    "program",
+    "deployment"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@chain-forge/solana": "portal:../../npm/@chain-forge/solana",
+    "@solana/web3.js": "^1.87.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.3.0"
+  }
+}
