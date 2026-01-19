@@ -10,5 +10,11 @@
   },
   "devDependencies": {
     "vitepress": "^1.0.0"
+  },
+  "overrides": {
+    "esbuild": "^0.24.2"
+  },
+  "resolutions": {
+    "esbuild": "^0.24.2"
   }
 }
