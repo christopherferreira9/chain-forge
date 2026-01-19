@@ -2,6 +2,9 @@
 
 A Foundry-inspired multi-chain development tool suite for local blockchain development and testing.
 
+[![CI](https://github.com/christopherferreira9/chain-forge/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/christopherferreira9/chain-forge/actions/workflows/ci.yml)
+[![Security Audit](https://github.com/christopherferreira9/chain-forge/actions/workflows/security.yml/badge.svg?branch=main)](https://github.com/christopherferreira9/chain-forge/actions/workflows/security.yml)
+
 ## Overview
 
 Chain Forge provides a unified interface for working with multiple blockchain networks locally. Currently supports Solana, with Bitcoin and Ethereum support planned for future releases.
