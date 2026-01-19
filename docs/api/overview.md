@@ -232,6 +232,95 @@ const url = client.getRpcUrl();
 console.log(`Connect to: ${url}`);  // http://localhost:8899
 ```
 
+### getKeypair()
+
+Get a Keypair from a generated account for signing transactions.
+
+```typescript
+async getKeypair(accountIndex?: number): Promise<Keypair>
+```
+
+#### Parameters
+
+- `accountIndex` - Index of the account (default: 0)
+
+#### Returns
+
+A `Keypair` instance from `@solana/web3.js` that can be used for signing transactions.
+
+#### Example
+
+```typescript
+// Get keypair for the first account
+const keypair = await client.getKeypair(0);
+console.log('Public key:', keypair.publicKey.toBase58());
+
+// Use for signing transactions
+const signature = await sendAndConfirmTransaction(
+  connection,
+  transaction,
+  [keypair]
+);
+```
+
+### deployProgram()
+
+Deploy a compiled Solana program (.so file) to the local validator.
+
+```typescript
+async deployProgram(
+  programPath: string,
+  options?: DeployProgramOptions
+): Promise<DeployProgramResult>
+```
+
+#### Parameters
+
+- `programPath` - Path to the compiled program (.so file)
+- `options` - Optional deployment configuration
+
+#### DeployProgramOptions
+
+```typescript
+interface DeployProgramOptions {
+  payerIndex?: number;       // Account index to use as payer (default: 0)
+  programKeypair?: Uint8Array; // Optional program keypair for deterministic IDs
+}
+```
+
+#### DeployProgramResult
+
+```typescript
+interface DeployProgramResult {
+  programId: string;    // The deployed program's public key (program ID)
+  signature: string;    // Transaction signature
+  payer: string;        // Payer account's public key
+  programSize: number;  // Size of the deployed program in bytes
+}
+```
+
+#### Example
+
+```typescript
+// Deploy a program using the first account as payer
+const result = await client.deployProgram('./target/deploy/my_program.so');
+console.log('Program ID:', result.programId);
+
+// Deploy using a specific account
+const result2 = await client.deployProgram('./program.so', {
+  payerIndex: 2,
+});
+
+// Interact with the deployed program
+const programId = new PublicKey(result.programId);
+```
+
+#### Notes
+
+- Ensure the payer account has sufficient SOL for deployment costs
+- Program size affects deployment cost (rent exemption)
+- Use `initialBalance: 500` or higher for deploying larger programs
+
 ### getMnemonic()
 
 Get the mnemonic phrase used to generate accounts.
@@ -320,7 +409,9 @@ All types are exported from the main package:
 import {
   SolanaClient,
   SolanaClientOptions,
-  Account,
+  SolanaAccount,
+  DeployProgramOptions,
+  DeployProgramResult,
 } from '@chain-forge/solana';
 ```
 

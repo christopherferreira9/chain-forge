@@ -36,7 +36,8 @@ export default defineConfig({
           { text: 'Overview', link: '/solana/overview' },
           { text: 'CLI Commands', link: '/solana/cli' },
           { text: 'Configuration', link: '/solana/configuration' },
-          { text: 'Account Management', link: '/solana/accounts' }
+          { text: 'Account Management', link: '/solana/accounts' },
+          { text: 'Program Deployment', link: '/solana/program-deployment' }
         ]
       },
       {
@@ -51,6 +52,7 @@ export default defineConfig({
         text: 'Examples',
         items: [
           { text: 'TypeScript Examples', link: '/examples/typescript' },
+          { text: 'Program Deployment', link: '/examples/program-deployment' },
           { text: 'CLI Workflows', link: '/examples/cli-workflows' }
         ]
       },

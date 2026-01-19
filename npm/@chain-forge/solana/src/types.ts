@@ -61,3 +61,45 @@ export interface SolanaAccount {
    */
   balance: number;
 }
+
+/**
+ * Options for deploying a Solana program
+ */
+export interface DeployProgramOptions {
+  /**
+   * Account index to use as payer (default: 0)
+   * Uses the account from getAccounts() at this index
+   */
+  payerIndex?: number;
+
+  /**
+   * Optional keypair to use as the program's keypair
+   * If not provided, a new keypair will be generated
+   */
+  programKeypair?: Uint8Array;
+}
+
+/**
+ * Result of a program deployment
+ */
+export interface DeployProgramResult {
+  /**
+   * The deployed program's public key (program ID)
+   */
+  programId: string;
+
+  /**
+   * Transaction signature of the deployment
+   */
+  signature: string;
+
+  /**
+   * The payer account's public key
+   */
+  payer: string;
+
+  /**
+   * Size of the deployed program in bytes
+   */
+  programSize: number;
+}
