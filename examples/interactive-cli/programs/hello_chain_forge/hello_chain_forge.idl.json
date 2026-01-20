@@ -1,0 +1,51 @@
+{
+  "name": "hello_chain_forge",
+  "version": "0.1.0",
+  "instructions": [
+    {
+      "name": "Initialize",
+      "discriminator": 0,
+      "description": "Initialize counter to 0 (requires program-owned account)",
+      "accounts": [
+        {
+          "name": "counter",
+          "isSigner": false,
+          "isWritable": true,
+          "description": "Must be a program-owned account with 8+ bytes (not a wallet)"
+        }
+      ]
+    },
+    {
+      "name": "Increment",
+      "discriminator": 1,
+      "description": "Add 1 to the counter (requires program-owned account)",
+      "accounts": [
+        {
+          "name": "counter",
+          "isSigner": false,
+          "isWritable": true,
+          "description": "Must be a program-owned account with 8+ bytes (not a wallet)"
+        }
+      ]
+    },
+    {
+      "name": "Hello",
+      "discriminator": 2,
+      "description": "Log a greeting message (no accounts needed)",
+      "accounts": []
+    },
+    {
+      "name": "Read",
+      "discriminator": 3,
+      "description": "Read and log the current counter value",
+      "accounts": [
+        {
+          "name": "counter",
+          "isSigner": false,
+          "isWritable": false,
+          "description": "Program-owned account to read the counter from"
+        }
+      ]
+    }
+  ]
+}

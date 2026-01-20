@@ -9,6 +9,7 @@
 //! - 0: Initialize counter to 0
 //! - 1: Increment counter by 1
 //! - 2: Log "Hello, Chain Forge!"
+//! - 3: Read and log current counter value
 
 use solana_program::{
     account_info::{next_account_info, AccountInfo},
@@ -73,6 +74,28 @@ pub fn process_instruction(
                 value = value.saturating_add(1);
                 data[..8].copy_from_slice(&value.to_le_bytes());
                 msg!("Counter incremented to: {}", value);
+            }
+        }
+
+        // Read: Log current counter value (read-only)
+        3 => {
+            msg!("Instruction: Read");
+            let accounts_iter = &mut accounts.iter();
+            let counter_account = next_account_info(accounts_iter)?;
+
+            // Verify the account is owned by this program
+            if counter_account.owner != program_id {
+                msg!("Counter account not owned by program");
+                return Err(ProgramError::IncorrectProgramId);
+            }
+
+            // Read and log current value
+            let data = counter_account.try_borrow_data()?;
+            if data.len() >= 8 {
+                let value = u64::from_le_bytes(data[..8].try_into().unwrap());
+                msg!("Current counter value: {}", value);
+            } else {
+                msg!("Account data too small to read counter");
             }
         }
 

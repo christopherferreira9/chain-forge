@@ -1,84 +1,27 @@
-# Program Deployment Example
+# Program Deployment
 
-This example demonstrates how to deploy Solana programs using Chain Forge.
+This guide covers deploying Solana programs using Chain Forge.
 
-## Prerequisites
+## Interactive Deployment
 
-- Solana CLI tools installed
-- Chain Forge CLI (`cf-solana`) installed
-- A compiled Solana program (.so file)
-
-## Example Project
-
-The full example is available at `examples/program-deployment/` in the repository.
-
-## Included Sample Program
-
-The example includes a ready-to-use sample program called **`hello_chain_forge`** located at `examples/program-deployment/program/`.
-
-### About the Program
-
-This is a simple demonstration program that shows basic Solana program structure:
-
-- Processing different instruction types
-- Logging messages to the validator
-- Reading and modifying account data (counter)
-
-### Supported Instructions
-
-| Instruction | Byte | Description |
-|------------|------|-------------|
-| Initialize | `0` | Sets the counter to 0 in the provided account |
-| Increment | `1` | Adds 1 to the counter in the provided account |
-| Hello | `2` (or any other) | Logs "Hello, Chain Forge!" and account info |
-
-### Building the Sample Program
+For interactive program deployment with a CLI interface, use the **Interactive CLI** example:
 
 ```bash
-cd examples/program-deployment
-
-# Build the program
-yarn build:program
-
-# Output: program/target/deploy/hello_chain_forge.so
-```
-
-### Deploying and Running
-
-```bash
-# Deploy the sample program
-yarn deploy:example
-
-# Or with mnemonic for reproducible accounts
-yarn deploy:example:mnemonic
-```
-
-## Quick Start
-
-### 1. Deploy with Default Accounts
-
-```bash
-# Navigate to example
-cd examples/program-deployment
+cd examples/interactive-cli
 yarn install
-
-# Deploy program
-yarn deploy ./path/to/your_program.so
+yarn build
+yarn start
 ```
 
-### 2. Deploy with Mnemonic
+The Interactive CLI provides:
+- Program discovery from the `programs/` directory
+- Automatic building with `cargo build-sbf`
+- Payer account selection
+- Real-time deployment status
 
-For reproducible deployments:
+See the [Interactive CLI documentation](./interactive-cli) for full details.
 
-```bash
-# Uses default test mnemonic
-yarn deploy:mnemonic ./path/to/your_program.so
-
-# Use custom mnemonic
-yarn deploy:mnemonic ./program.so "your twelve word mnemonic phrase"
-```
-
-## Code Examples
+## Programmatic Deployment
 
 ### Basic Deployment
 
@@ -119,7 +62,6 @@ const result = await client.deployProgram('./program.so', {
   payerIndex: 2,
 });
 
-// Check which account paid
 console.log('Payer:', result.payer);
 ```
 
@@ -164,9 +106,8 @@ async function deployAndInteract() {
 
   // Deploy
   const { programId } = await client.deployProgram('./my_program.so');
-  console.log('Deployed:', programId);
 
-  // Create instruction to call program
+  // Create instruction
   const connection = client.getConnection();
   const signer = await client.getKeypair(0);
 
@@ -175,16 +116,12 @@ async function deployAndInteract() {
       { pubkey: signer.publicKey, isSigner: true, isWritable: true },
     ],
     programId: new PublicKey(programId),
-    data: Buffer.from([/* your instruction data */]),
+    data: Buffer.from([/* instruction data */]),
   });
 
   // Send transaction
   const tx = new Transaction().add(instruction);
-  const signature = await sendAndConfirmTransaction(
-    connection,
-    tx,
-    [signer]
-  );
+  const signature = await sendAndConfirmTransaction(connection, tx, [signer]);
 
   console.log('Transaction:', signature);
 
@@ -192,28 +129,60 @@ async function deployAndInteract() {
 }
 ```
 
-## Creating a Test Program
+## Creating a Solana Program
 
-If you don't have a program to deploy:
-
-### Using Solana CLI
+### Using Cargo
 
 ```bash
 # Create a new Rust library
-cargo new --lib hello_solana
-cd hello_solana
+mkdir -p my_program/src
+cd my_program
+```
 
-# Edit Cargo.toml to add:
-# [lib]
-# crate-type = ["cdylib", "lib"]
-#
-# [dependencies]
-# solana-program = "2.0"
+Create `Cargo.toml`:
 
-# Build with Solana BPF toolchain
+```toml
+[package]
+name = "my_program"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[dependencies]
+solana-program = "2.0"
+```
+
+Create `src/lib.rs`:
+
+```rust
+use solana_program::{
+    account_info::AccountInfo,
+    entrypoint,
+    entrypoint::ProgramResult,
+    msg,
+    pubkey::Pubkey,
+};
+
+entrypoint!(process_instruction);
+
+pub fn process_instruction(
+    program_id: &Pubkey,
+    accounts: &[AccountInfo],
+    _instruction_data: &[u8],
+) -> ProgramResult {
+    msg!("Hello from my program!");
+    msg!("Program ID: {}", program_id);
+    Ok(())
+}
+```
+
+Build with:
+
+```bash
 cargo build-sbf
-
-# Output: target/deploy/hello_solana.so
+# Output: target/deploy/my_program.so
 ```
 
 ### Using Anchor
@@ -222,7 +191,6 @@ cargo build-sbf
 anchor init my_project
 cd my_project
 anchor build
-
 # Output: target/deploy/my_project.so
 ```
 
@@ -240,7 +208,7 @@ async deployProgram(
 **Options:**
 ```typescript
 interface DeployProgramOptions {
-  payerIndex?: number;       // Account index for payer (default: 0)
+  payerIndex?: number;         // Account index for payer (default: 0)
   programKeypair?: Uint8Array; // Optional deterministic program keypair
 }
 ```
@@ -268,10 +236,9 @@ Returns a `Keypair` for signing transactions.
 1. **Sufficient Balance**: Use `initialBalance: 500` or higher for program deployment
 2. **Mnemonic for CI/CD**: Use a fixed mnemonic for reproducible deployments
 3. **Program Size**: Larger programs require more SOL for rent exemption
-4. **Multiple Programs**: Deploy multiple programs using different `payerIndex` values
 
 ## See Also
 
-- [Program Deployment Guide](../solana/program-deployment)
-- [API Reference](../api/overview)
+- [Interactive CLI](./interactive-cli)
 - [TypeScript Examples](./typescript)
+- [API Reference](../api/overview)
