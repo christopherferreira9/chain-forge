@@ -4,94 +4,69 @@ Real-world examples of using Chain Forge with TypeScript.
 
 ## Basic Example
 
-Simple validator setup and account usage:
-
-```typescript
-import { SolanaClient } from '@chain-forge/solana';
-
-async function main() {
-  const client = new SolanaClient({
-    accounts: 10,
-    initialBalance: 100,
-  });
-
-  await client.start();
-  console.log('Validator started!');
-
-  const accounts = await client.getAccounts();
-  console.log(`Generated ${accounts.length} accounts`);
-
-  client.stop();
-}
-
-main().catch(console.error);
-```
-
-## Transfer SOL
-
-Transfer SOL between accounts:
+The `typescript-basic` example demonstrates a minimal CI-friendly workflow:
 
 ```typescript
 import { SolanaClient } from '@chain-forge/solana';
 import {
-  Connection,
   PublicKey,
   Transaction,
   SystemProgram,
   Keypair,
   sendAndConfirmTransaction,
+  LAMPORTS_PER_SOL,
 } from '@solana/web3.js';
 
-async function transferExample() {
-  const client = new SolanaClient();
-  await client.start();
+async function main() {
+  // Create client with 3 accounts
+  const client = new SolanaClient({
+    accounts: 3,
+    initialBalance: 100,
+    port: 8899,
+  });
 
-  // Get accounts
-  const accounts = await client.getAccounts();
-  const sender = accounts[0];
-  const receiver = accounts[1];
+  try {
+    await client.start();
+    const accounts = await client.getAccounts();
 
-  console.log(`Sender: ${sender.publicKey} (${sender.balance} SOL)`);
-  console.log(`Receiver: ${receiver.publicKey} (${receiver.balance} SOL)`);
+    // Transfer 5 SOL from account 0 to account 1
+    const sender = accounts[0];
+    const receiver = accounts[1];
+    const senderKeypair = Keypair.fromSecretKey(new Uint8Array(sender.secretKey));
+    const connection = client.getConnection();
 
-  // Create keypair
-  const senderKeypair = Keypair.fromSecretKey(sender.secretKey);
-  const connection = client.getConnection();
+    const transaction = new Transaction().add(
+      SystemProgram.transfer({
+        fromPubkey: new PublicKey(sender.publicKey),
+        toPubkey: new PublicKey(receiver.publicKey),
+        lamports: 5 * LAMPORTS_PER_SOL,
+      })
+    );
 
-  // Create transfer
-  const transaction = new Transaction().add(
-    SystemProgram.transfer({
-      fromPubkey: new PublicKey(sender.publicKey),
-      toPubkey: new PublicKey(receiver.publicKey),
-      lamports: 1_000_000_000, // 1 SOL
-    })
-  );
-
-  // Send and confirm
-  const signature = await sendAndConfirmTransaction(
-    connection,
-    transaction,
-    [senderKeypair]
-  );
-
-  console.log(`Transfer successful! Signature: ${signature}`);
-
-  // Check balances
-  const senderBalance = await client.getBalance(sender.publicKey);
-  const receiverBalance = await client.getBalance(receiver.publicKey);
-
-  console.log(`Sender new balance: ${senderBalance} SOL`);
-  console.log(`Receiver new balance: ${receiverBalance} SOL`);
-
-  client.stop();
+    await sendAndConfirmTransaction(connection, transaction, [senderKeypair]);
+    console.log('Transfer complete!');
+  } finally {
+    client.stop();
+  }
 }
 
-transferExample().catch(console.error);
+main();
 ```
 
-## Test Suite Integration
+### Running the Example
 
-Complete test suite example:
+```bash
+cd examples/typescript-basic
+yarn install
+yarn build
+yarn start
+```
+
+## Interactive CLI
+
+For a full-featured interactive experience, see the [Interactive CLI Example](./interactive-cli).
+
+## Test Suite Integration
 
 ```typescript
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
@@ -132,24 +107,13 @@ describe('Solana Integration Tests', () => {
     });
   });
 
-  it('should fund account', async () => {
-    const account = accounts[0];
-    const initialBalance = await client.getBalance(account.publicKey);
-
-    await client.fundAccount(account.publicKey, 50);
-
-    const newBalance = await client.getBalance(account.publicKey);
-    expect(newBalance).toBeGreaterThan(initialBalance);
-  });
-
   it('should transfer SOL', async () => {
     const sender = accounts[0];
     const receiver = accounts[1];
 
-    const senderKeypair = Keypair.fromSecretKey(sender.secretKey);
+    const senderKeypair = Keypair.fromSecretKey(new Uint8Array(sender.secretKey));
     const connection = client.getConnection();
 
-    const initialSenderBalance = await client.getBalance(sender.publicKey);
     const initialReceiverBalance = await client.getBalance(receiver.publicKey);
 
     const transaction = new Transaction().add(
@@ -162,13 +126,7 @@ describe('Solana Integration Tests', () => {
 
     await sendAndConfirmTransaction(connection, transaction, [senderKeypair]);
 
-    const finalSenderBalance = await client.getBalance(sender.publicKey);
     const finalReceiverBalance = await client.getBalance(receiver.publicKey);
-
-    // Sender should have less (5 SOL + fees)
-    expect(finalSenderBalance).toBeLessThan(initialSenderBalance - 5);
-
-    // Receiver should have exactly 5 SOL more
     expect(finalReceiverBalance).toBe(initialReceiverBalance + 5);
   });
 });
@@ -215,69 +173,6 @@ jobs:
         run: npm test
 ```
 
-## Express API Server
-
-Run a local validator with an Express API:
-
-```typescript
-import express from 'express';
-import { SolanaClient } from '@chain-forge/solana';
-
-const app = express();
-const client = new SolanaClient();
-
-app.use(express.json());
-
-// Start validator on server startup
-async function startServer() {
-  await client.start();
-  console.log('Validator started');
-
-  app.get('/accounts', async (req, res) => {
-    try {
-      const accounts = await client.getAccounts();
-      res.json(accounts);
-    } catch (error) {
-      res.status(500).json({ error: (error as Error).message });
-    }
-  });
-
-  app.get('/balance/:publicKey', async (req, res) => {
-    try {
-      const balance = await client.getBalance(req.params.publicKey);
-      res.json({ balance });
-    } catch (error) {
-      res.status(500).json({ error: (error as Error).message });
-    }
-  });
-
-  app.post('/fund', async (req, res) => {
-    try {
-      const { publicKey, amount } = req.body;
-      await client.fundAccount(publicKey, amount);
-      const balance = await client.getBalance(publicKey);
-      res.json({ success: true, balance });
-    } catch (error) {
-      res.status(500).json({ error: (error as Error).message });
-    }
-  });
-
-  const PORT = 3000;
-  app.listen(PORT, () => {
-    console.log(`API server running on http://localhost:${PORT}`);
-  });
-}
-
-// Cleanup on exit
-process.on('SIGINT', () => {
-  console.log('Stopping validator...');
-  client.stop();
-  process.exit(0);
-});
-
-startServer().catch(console.error);
-```
-
 ## Multiple Validators
 
 Run multiple validators on different ports:
@@ -310,6 +205,6 @@ multiValidatorExample().catch(console.error);
 
 ## See Also
 
+- [Interactive CLI Example](./interactive-cli)
+- [Program Deployment](./program-deployment)
 - [API Reference](../api/overview)
-- [Basic Usage Guide](../typescript/basic-usage)
-- [Example Projects Repository](https://github.com/yourusername/chain-forge/tree/main/examples)

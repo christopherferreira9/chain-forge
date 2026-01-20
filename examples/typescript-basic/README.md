@@ -1,14 +1,22 @@
 # Chain Forge - Basic TypeScript Example
 
-This example demonstrates basic usage of Chain Forge with TypeScript and Solana.
+A minimal CI-friendly example demonstrating Chain Forge with TypeScript.
+
+## What This Example Shows
+
+1. Starting a local Solana test validator
+2. Getting pre-funded accounts
+3. Transferring SOL between accounts
+
+This example runs to completion without user interaction, making it suitable for CI pipelines.
 
 ## Prerequisites
 
 1. Install Solana CLI tools
-2. Install the Chain Forge CLI:
+2. Build Chain Forge:
    ```bash
    cd ../..
-   cargo install --path chains/solana/crates/cli
+   cargo build --workspace --release
    ```
 
 ## Setup
@@ -19,34 +27,25 @@ yarn install
 
 ## Run
 
+Build and run:
+
+```bash
+yarn build
+yarn start
+```
+
+Or use development mode:
+
 ```bash
 yarn dev
 ```
 
-Or build and run:
+## For Interactive Exploration
 
-```bash
-yarn build
-npm start
-```
-
-## What This Example Shows
-
-1. **Starting a local validator** - Programmatically start a Solana test validator
-2. **Getting accounts** - Retrieve generated accounts with their keys and balances
-3. **Funding accounts** - Request airdrops to accounts
-4. **Using Solana Web3.js** - Direct integration with the official Solana SDK
-5. **Querying balances** - Check account balances
-6. **Getting cluster info** - Retrieve blockchain metadata
-
-## Code Structure
-
-- `src/index.ts` - Main example file with 4 different examples
-- `package.json` - Dependencies and scripts
-- `tsconfig.json` - TypeScript configuration
+For a full-featured interactive CLI experience with program deployment, fund transfers, and more, see the [interactive-cli](../interactive-cli/) example.
 
 ## Learn More
 
-- [Chain Forge Documentation](../../docs/GETTING_STARTED.md)
-- [Solana Web3.js Documentation](https://solana-labs.github.io/solana-web3.js/)
-- [@chain-forge/solana Package](../../npm/@chain-forge/solana/README.md)
+- [Interactive CLI Example](../interactive-cli/)
+- [Chain Forge Documentation](../../docs/)
+- [@chain-forge/solana Package](../../npm/@chain-forge/solana/)

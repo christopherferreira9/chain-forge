@@ -1,24 +1,30 @@
 {
-  "name": "chain-forge-example-basic",
+  "name": "chain-forge-interactive-cli",
   "version": "1.0.0",
-  "description": "Basic example of using Chain Forge with TypeScript",
+  "description": "Interactive CLI for Chain Forge - explore Solana development interactively",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts"
+    "dev": "ts-node src/index.ts",
+    "build:program": "cd programs/hello_chain_forge && cargo build-sbf"
   },
   "packageManager": "yarn@4.0.2",
   "keywords": [
     "solana",
     "chain-forge",
-    "example"
+    "cli",
+    "interactive"
   ],
   "author": "",
   "license": "MIT",
   "dependencies": {
     "@chain-forge/solana": "portal:../../npm/@chain-forge/solana",
-    "@solana/web3.js": "^1.87.0"
+    "@inquirer/prompts": "^7.0.0",
+    "@solana/web3.js": "^1.87.0",
+    "chalk": "^4.1.2",
+    "cli-table3": "^0.6.5",
+    "ora": "^5.4.1"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
