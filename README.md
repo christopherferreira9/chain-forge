@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/logo.png" alt="Chain Forge Logo" style="max-width:300px; width:100%;">
+  <img src="docs/assets/logo.png" alt="Chain Forge Logo" style="max-width:150px; width:100%;">
 </p>
 
 
