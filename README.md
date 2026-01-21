@@ -1,3 +1,9 @@
+<p align="center">
+  <img src="docs/assets/logo.png" alt="Chain Forge Logo" style="max-width:300px; width:100%;">
+</p>
+
+
+
 # Chain Forge
 
 A Foundry-inspired multi-chain development tool suite for local blockchain development and testing.

@@ -5,6 +5,7 @@ export default defineConfig({
   title: "Chain Forge",
   description: "A Foundry-inspired multi-chain development tool suite for local blockchain development",
   base: '/chain-forge/',
+  head: [['link', { rel: 'icon', href: '/chain-forge/logo.ico' }]],
 
   ignoreDeadLinks: [
     /^http:\/\/localhost/,
@@ -12,7 +13,7 @@ export default defineConfig({
 
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
-    logo: '/logo.svg',
+    logo: '/chain-forge/logo.ico',
 
     nav: [
       { text: 'Home', link: '/' },
