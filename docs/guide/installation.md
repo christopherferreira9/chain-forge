@@ -88,7 +88,7 @@ Clone the repository and build:
 
 ```bash
 # Clone
-git clone https://github.com/yourusername/chain-forge
+git clone https://github.com/christopherferreira9/chain-forge
 cd chain-forge
 
 # Build the entire workspace

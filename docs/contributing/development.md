@@ -12,7 +12,7 @@ Guide for contributing to Chain Forge development.
 ## Setup
 
 ```bash
-git clone https://github.com/yourusername/chain-forge
+git clone https://github.com/christopherferreira9/chain-forge
 cd chain-forge
 cargo build --workspace
 ```

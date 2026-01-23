@@ -187,7 +187,7 @@ Solana:
     devnet:
       RPC URL: https://api.devnet.solana.com
 
-Data Directory: /Users/username/.chain-forge
+Data Directory: /Users/christopherferreira9/.chain-forge
 ```
 
 ### `cf-solana stop`

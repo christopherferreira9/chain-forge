@@ -11,7 +11,7 @@ hero:
       link: /guide/getting-started
     - theme: alt
       text: View on GitHub
-      link: https://github.com/yourusername/chain-forge
+      link: https://github.com/christopherferreira9/chain-forge
 
 features:
   - icon: ⚡

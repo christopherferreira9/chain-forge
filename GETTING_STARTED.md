@@ -35,7 +35,7 @@ This guide will walk you through setting up and using Chain Forge for local bloc
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/chain-forge
+git clone https://github.com/christopherferreira9/chain-forge
 cd chain-forge
 
 # Build the workspace
@@ -353,6 +353,6 @@ Always stop validators when done:
 
 ## Getting Help
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/chain-forge/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/chain-forge/discussions)
+- **Issues**: [GitHub Issues](https://github.com/christopherferreira9/chain-forge/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/youruserchristopherferreira9name/chain-forge/discussions)
 - **Documentation**: [docs/](.)

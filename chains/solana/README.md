@@ -16,7 +16,7 @@ Local Solana development made easy. Start a test validator with pre-funded accou
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/chain-forge
+git clone https://github.com/christopherferreira9/chain-forge
 cd chain-forge
 
 # Build and install the CLI

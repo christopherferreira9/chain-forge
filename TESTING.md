@@ -816,7 +816,7 @@ Once all tests pass:
 
 2. **Push to GitHub**
    ```bash
-   git remote add origin https://github.com/yourusername/chain-forge
+   git remote add origin https://github.com/christopherferreira9/chain-forge
    git push -u origin main
    ```
 

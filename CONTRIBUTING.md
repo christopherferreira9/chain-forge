@@ -19,7 +19,7 @@ Be respectful and inclusive. We want Chain Forge to be a welcoming project for e
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/chain-forge
+git clone https://github.com/christopherferreira9/chain-forge
 cd chain-forge
 
 # Install development tools (cargo-audit, etc.)
@@ -339,8 +339,8 @@ cargo doc --workspace --no-deps
 
 ## Getting Help
 
-- **Issues**: [GitHub Issues](https://github.com/yourusername/chain-forge/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/chain-forge/discussions)
+- **Issues**: [GitHub Issues](https://github.com/christopherferreira9/chain-forge/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/christopherferreira9/chain-forge/discussions)
 - **Discord**: (Add Discord link if available)
 
 ## License

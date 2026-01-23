@@ -22,7 +22,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/chain-forge"
+    "url": "https://github.com/christopherferreira9/chain-forge"
   },
   "peerDependencies": {
     "@solana/web3.js": "^1.87.0"

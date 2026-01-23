@@ -16,7 +16,7 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 rust-version = "1.75"
 authors = ["Chain Forge Contributors"]
-repository = "https://github.com/yourusername/chain-forge"
+repository = "https://github.com/christopherferreira9/chain-forge"
 
 [workspace.dependencies]
 # Common dependencies
