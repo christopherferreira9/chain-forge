@@ -108,9 +108,9 @@ rpc_url = "https://api.devnet.solana.com"
 
 ## Documentation
 
-- [Getting Started Guide](docs/GETTING_STARTED.md)
-- [Contributing Guide](docs/CONTRIBUTING.md)
-- [Testing Guide](docs/TESTING.md)
+- [Getting Started Guide](docs/guide/getting-started.md)
+- [Contributing Guide](docs/contributing/development.md)
+- [Testing Guide](docs/contributing/testing.md)
 
 For development documentation, see the [.claude](.claude) directory.
 
