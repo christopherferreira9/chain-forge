@@ -42,6 +42,15 @@ export default defineConfig({
         ]
       },
       {
+        text: 'Bitcoin',
+        items: [
+          { text: 'Overview', link: '/bitcoin/overview' },
+          { text: 'CLI Commands', link: '/bitcoin/cli' },
+          { text: 'Configuration', link: '/bitcoin/configuration' },
+          { text: 'Account Management', link: '/bitcoin/accounts' }
+        ]
+      },
+      {
         text: 'TypeScript Package',
         items: [
           { text: 'Installation', link: '/typescript/installation' },
