@@ -13,8 +13,9 @@ pub const DATA_DIR_NAME: &str = ".chain-forge";
 pub struct Config {
     #[serde(default)]
     pub solana: Option<SolanaConfig>,
+    #[serde(default)]
+    pub bitcoin: Option<BitcoinConfig>,
     // Future chains
-    // pub bitcoin: Option<BitcoinConfig>,
     // pub ethereum: Option<EthereumConfig>,
 }
 
@@ -67,6 +68,81 @@ fn default_initial_balance() -> f64 {
 
 fn default_port() -> u16 {
     8899
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BitcoinConfig {
+    #[serde(default)]
+    pub default: BitcoinProfile,
+
+    #[serde(flatten)]
+    pub profiles: std::collections::HashMap<String, BitcoinProfile>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BitcoinProfile {
+    #[serde(default = "default_bitcoin_rpc_url")]
+    pub rpc_url: String,
+
+    #[serde(default = "default_bitcoin_accounts")]
+    pub accounts: u32,
+
+    #[serde(default = "default_bitcoin_initial_balance")]
+    pub initial_balance: f64,
+
+    #[serde(default = "default_bitcoin_rpc_port")]
+    pub rpc_port: u16,
+
+    #[serde(default = "default_bitcoin_p2p_port")]
+    pub p2p_port: u16,
+
+    #[serde(default = "default_bitcoin_rpc_user")]
+    pub rpc_user: String,
+
+    #[serde(default = "default_bitcoin_rpc_password")]
+    pub rpc_password: String,
+}
+
+impl Default for BitcoinProfile {
+    fn default() -> Self {
+        Self {
+            rpc_url: default_bitcoin_rpc_url(),
+            accounts: default_bitcoin_accounts(),
+            initial_balance: default_bitcoin_initial_balance(),
+            rpc_port: default_bitcoin_rpc_port(),
+            p2p_port: default_bitcoin_p2p_port(),
+            rpc_user: default_bitcoin_rpc_user(),
+            rpc_password: default_bitcoin_rpc_password(),
+        }
+    }
+}
+
+fn default_bitcoin_rpc_url() -> String {
+    "http://localhost:18443".to_string()
+}
+
+fn default_bitcoin_accounts() -> u32 {
+    10
+}
+
+fn default_bitcoin_initial_balance() -> f64 {
+    10.0
+}
+
+fn default_bitcoin_rpc_port() -> u16 {
+    18443
+}
+
+fn default_bitcoin_p2p_port() -> u16 {
+    18444
+}
+
+fn default_bitcoin_rpc_user() -> String {
+    "chainforge".to_string()
+}
+
+fn default_bitcoin_rpc_password() -> String {
+    "chainforge".to_string()
 }
 
 impl Config {

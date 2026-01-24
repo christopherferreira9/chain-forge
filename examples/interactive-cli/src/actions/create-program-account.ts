@@ -7,7 +7,7 @@ import {
   Keypair,
   sendAndConfirmTransaction,
 } from '@solana/web3.js';
-import { getActiveNode, addProgramAccount } from '../state';
+import { getActiveSolanaNode, addProgramAccount } from '../state';
 import { DeployedProgram } from '../types';
 import { success, error, info, warning, truncateAddress, dim } from '../ui/formatters';
 
@@ -19,9 +19,9 @@ async function waitForEnter(): Promise<void> {
 }
 
 export async function createProgramAccount(): Promise<void> {
-  const node = getActiveNode();
+  const node = getActiveSolanaNode();
   if (!node) {
-    console.log(error('No active node. Please deploy a node first.'));
+    console.log(error('No active Solana node. Please deploy a Solana node first.'));
     return;
   }
 

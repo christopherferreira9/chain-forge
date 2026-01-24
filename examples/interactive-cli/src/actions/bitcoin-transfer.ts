@@ -1,24 +1,16 @@
 import { select, input, confirm } from '@inquirer/prompts';
 import ora from 'ora';
-import {
-  PublicKey,
-  Transaction,
-  SystemProgram,
-  sendAndConfirmTransaction,
-  Keypair,
-  LAMPORTS_PER_SOL,
-} from '@solana/web3.js';
-import { getActiveSolanaNode } from '../state';
+import { getActiveBitcoinNode } from '../state';
 import { success, error, info, truncateAddress, formatBalance, dim } from '../ui/formatters';
 
 async function waitForEnter(): Promise<void> {
   await input({ message: dim('Press Enter to continue...') });
 }
 
-export async function sendFunds(): Promise<void> {
-  const node = getActiveSolanaNode();
+export async function bitcoinTransfer(): Promise<void> {
+  const node = getActiveBitcoinNode();
   if (!node) {
-    console.log(error('No active Solana node. Please deploy a Solana node first.'));
+    console.log(error('No active Bitcoin node. Please deploy a Bitcoin node first.'));
     return;
   }
 
@@ -26,7 +18,7 @@ export async function sendFunds(): Promise<void> {
 
   // Select source account
   const sourceChoices = node.accounts.map((acc, i) => ({
-    name: `Account ${i}: ${truncateAddress(acc.publicKey, 6)} (${formatBalance(acc.balance)} SOL)`,
+    name: `Account ${i}: ${truncateAddress(acc.address, 6)} (${formatBalance(acc.balance)} BTC)`,
     value: i,
   }));
 
@@ -42,8 +34,8 @@ export async function sendFunds(): Promise<void> {
     ...node.accounts
       .filter((_, i) => i !== sourceIndex)
       .map((acc, i) => ({
-        name: `Account ${i >= sourceIndex ? i + 1 : i}: ${truncateAddress(acc.publicKey, 6)} (${formatBalance(acc.balance)} SOL)`,
-        value: acc.publicKey,
+        name: `Account ${i >= sourceIndex ? i + 1 : i}: ${truncateAddress(acc.address, 6)} (${formatBalance(acc.balance)} BTC)`,
+        value: acc.address,
       })),
     {
       name: 'Enter custom address',
@@ -60,39 +52,45 @@ export async function sendFunds(): Promise<void> {
     destAddress = await input({
       message: 'Enter destination address',
       validate: (value) => {
-        try {
-          new PublicKey(value);
-          return true;
-        } catch {
-          return 'Invalid Solana address';
+        // Basic Bitcoin address validation (bcrt1, tb1, bc1, or legacy)
+        if (value.length < 26 || value.length > 90) {
+          return 'Invalid Bitcoin address length';
         }
+        return true;
       },
     });
   }
 
   // Enter amount
-  const maxAmount = sourceAccount.balance - 0.001; // Leave some for fees
+  const maxAmount = sourceAccount.balance - 0.0001; // Leave some for fees
   const amountInput = await input({
-    message: `Amount to send (max: ${formatBalance(maxAmount)} SOL)`,
+    message: `Amount to send (max: ${formatBalance(maxAmount)} BTC)`,
     validate: (value) => {
       const amount = parseFloat(value);
       if (isNaN(amount) || amount <= 0) {
         return 'Amount must be a positive number';
       }
       if (amount > maxAmount) {
-        return `Amount exceeds maximum (${formatBalance(maxAmount)} SOL)`;
+        return `Amount exceeds maximum (${formatBalance(maxAmount)} BTC)`;
       }
       return true;
     },
   });
   const amount = parseFloat(amountInput);
 
+  // Ask if user wants to mine a block to confirm
+  const mineBlock = await confirm({
+    message: 'Mine a block to confirm the transaction?',
+    default: true,
+  });
+
   // Confirmation
   console.log();
   console.log(info('Transaction Summary:'));
-  console.log(`  From: ${truncateAddress(sourceAccount.publicKey, 8)}`);
+  console.log(`  From: ${truncateAddress(sourceAccount.address, 8)}`);
   console.log(`  To: ${truncateAddress(destAddress, 8)}`);
-  console.log(`  Amount: ${formatBalance(amount)} SOL`);
+  console.log(`  Amount: ${formatBalance(amount)} BTC`);
+  console.log(`  Mine block: ${mineBlock ? 'Yes' : 'No'}`);
   console.log();
 
   const confirmed = await confirm({
@@ -105,33 +103,35 @@ export async function sendFunds(): Promise<void> {
     return;
   }
 
-  // Execute transaction
+  // Execute transaction (transfer from source account to destination)
   const spinner = ora('Sending transaction...').start();
 
   try {
-    const connection = node.client.getConnection();
-    const senderKeypair = Keypair.fromSecretKey(new Uint8Array(sourceAccount.secretKey));
-
-    const transaction = new Transaction().add(
-      SystemProgram.transfer({
-        fromPubkey: new PublicKey(sourceAccount.publicKey),
-        toPubkey: new PublicKey(destAddress),
-        lamports: Math.floor(amount * LAMPORTS_PER_SOL),
-      })
-    );
-
-    const signature = await sendAndConfirmTransaction(connection, transaction, [senderKeypair]);
-
-    spinner.succeed('Transaction confirmed!');
+    const result = await node.client.transfer(sourceAccount.address, destAddress, amount);
+    spinner.succeed('Transaction sent!');
 
     console.log();
     console.log(success('Transaction Result:'));
-    console.log(`  Signature: ${truncateAddress(signature, 12)}`);
+    console.log(`  TxID: ${truncateAddress(result.txid, 12)}`);
 
-    // Refresh balances
-    spinner.start('Refreshing balances...');
+    // Mine a block if requested
+    if (mineBlock) {
+      spinner.start('Mining block to confirm transaction...');
+      const mineResult = await node.client.mine(1);
+      spinner.succeed('Block mined!');
+      if (mineResult.height) {
+        console.log(`  Block height: ${mineResult.height}`);
+      }
+    }
+
+    // Refresh balances from blockchain
+    spinner.start('Refreshing balances from blockchain...');
+    const updatedAccounts = await node.client.refreshBalances();
     for (let i = 0; i < node.accounts.length; i++) {
-      node.accounts[i].balance = await node.client.getBalance(node.accounts[i].publicKey);
+      const updated = updatedAccounts.find(a => a.address === node.accounts[i].address);
+      if (updated) {
+        node.accounts[i].balance = updated.balance;
+      }
     }
     spinner.succeed('Balances updated');
 

@@ -7,7 +7,7 @@ import {
   sendAndConfirmTransaction,
   Keypair,
 } from '@solana/web3.js';
-import { getActiveNode } from '../state';
+import { getActiveSolanaNode } from '../state';
 import { loadIDL } from '../utils/idl';
 import { DeployedProgram, IDLInstruction, IDLInstructionArg } from '../types';
 import { success, error, info, warning, truncateAddress, dim } from '../ui/formatters';
@@ -59,9 +59,9 @@ function serializeArgs(args: IDLInstructionArg[], values: Record<string, string>
 }
 
 export async function interactProgram(): Promise<void> {
-  const node = getActiveNode();
+  const node = getActiveSolanaNode();
   if (!node) {
-    console.log(error('No active node. Please deploy a node first.'));
+    console.log(error('No active Solana node. Please deploy a Solana node first.'));
     return;
   }
 

@@ -2,7 +2,7 @@ import { select, confirm, input } from '@inquirer/prompts';
 import ora from 'ora';
 import { spawn } from 'child_process';
 import { Keypair } from '@solana/web3.js';
-import { getActiveNode, addDeployedProgram } from '../state';
+import { getActiveSolanaNode, addDeployedProgram } from '../state';
 import { discoverPrograms, getProgramSoPath, isProgramBuilt } from '../utils/programs';
 import { getIDLPath, hasIDL } from '../utils/idl';
 import { success, error, info, warning, formatSize, truncateAddress, dim } from '../ui/formatters';
@@ -12,9 +12,9 @@ async function waitForEnter(): Promise<void> {
 }
 
 export async function deployProgram(): Promise<void> {
-  const node = getActiveNode();
+  const node = getActiveSolanaNode();
   if (!node) {
-    console.log(error('No active node. Please deploy a node first.'));
+    console.log(error('No active Solana node. Please deploy a Solana node first.'));
     return;
   }
 

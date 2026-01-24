@@ -5,11 +5,13 @@ on:
     branches: [ main, develop ]
     paths:
       - 'npm/**'
+      - 'examples/**'
       - '.github/workflows/typescript.yml'
   pull_request:
     branches: [ main, develop ]
     paths:
       - 'npm/**'
+      - 'examples/**'
       - '.github/workflows/typescript.yml'
 
 # Cancel in-progress runs when a new workflow with the same group name starts
@@ -37,16 +39,28 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
-      - name: Install dependencies
+      - name: Install Solana dependencies
         working-directory: npm/@chain-forge/solana
         run: yarn install --immutable
 
-      - name: Build TypeScript
+      - name: Build Solana TypeScript
         working-directory: npm/@chain-forge/solana
         run: yarn build
 
-      - name: Check types
+      - name: Check Solana types
         working-directory: npm/@chain-forge/solana
+        run: yarn tsc --noEmit
+
+      - name: Install Bitcoin dependencies
+        working-directory: npm/@chain-forge/bitcoin
+        run: yarn install --immutable
+
+      - name: Build Bitcoin TypeScript
+        working-directory: npm/@chain-forge/bitcoin
+        run: yarn build
+
+      - name: Check Bitcoin types
+        working-directory: npm/@chain-forge/bitcoin
         run: yarn tsc --noEmit
 
   lint:
@@ -65,12 +79,26 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
-      - name: Install dependencies
+      - name: Install Solana dependencies
         working-directory: npm/@chain-forge/solana
         run: yarn install --immutable
 
-      - name: Run ESLint (if configured)
+      - name: Run ESLint on Solana (if configured)
         working-directory: npm/@chain-forge/solana
+        run: |
+          if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ]; then
+            yarn eslint src/
+          else
+            echo "ESLint not configured, skipping"
+          fi
+        continue-on-error: true
+
+      - name: Install Bitcoin dependencies
+        working-directory: npm/@chain-forge/bitcoin
+        run: yarn install --immutable
+
+      - name: Run ESLint on Bitcoin (if configured)
+        working-directory: npm/@chain-forge/bitcoin
         run: |
           if [ -f ".eslintrc.js" ] || [ -f ".eslintrc.json" ]; then
             yarn eslint src/
@@ -95,18 +123,34 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
-      - name: Build TypeScript package
+      - name: Build Solana TypeScript package
         working-directory: npm/@chain-forge/solana
         run: |
           yarn install --immutable
           yarn build
 
-      - name: Install example dependencies
+      - name: Build Bitcoin TypeScript package
+        working-directory: npm/@chain-forge/bitcoin
+        run: |
+          yarn install --immutable
+          yarn build
+
+      - name: Install typescript-basic example dependencies
         working-directory: examples/typescript-basic
         run: yarn install
         env:
           YARN_ENABLE_HARDENED_MODE: 0
 
-      - name: Build example
+      - name: Build typescript-basic example
         working-directory: examples/typescript-basic
+        run: yarn build
+
+      - name: Install bitcoin-basic example dependencies
+        working-directory: examples/bitcoin-basic
+        run: yarn install
+        env:
+          YARN_ENABLE_HARDENED_MODE: 0
+
+      - name: Build bitcoin-basic example
+        working-directory: examples/bitcoin-basic
         run: yarn build

@@ -1,4 +1,4 @@
-import { AppState, NodeState, ProgramAccount } from './types';
+import { AppState, NodeState, ProgramAccount, SolanaNodeState, BitcoinNodeState, isSolanaNode, isBitcoinNode } from './types';
 
 let state: AppState = {
   nodes: [],
@@ -16,6 +16,22 @@ export function getActiveNode(): NodeState | null {
   return state.nodes[state.activeNodeIndex];
 }
 
+export function getActiveSolanaNode(): SolanaNodeState | null {
+  const node = getActiveNode();
+  if (node && isSolanaNode(node)) {
+    return node;
+  }
+  return null;
+}
+
+export function getActiveBitcoinNode(): BitcoinNodeState | null {
+  const node = getActiveNode();
+  if (node && isBitcoinNode(node)) {
+    return node;
+  }
+  return null;
+}
+
 export function addNode(node: NodeState): void {
   state.nodes.push(node);
   state.activeNodeIndex = state.nodes.length - 1;
@@ -31,19 +47,19 @@ export function removeActiveNode(): void {
 export function updateActiveNodeAccounts(accounts: NodeState['accounts']): void {
   const node = getActiveNode();
   if (node) {
-    node.accounts = accounts;
+    (node as any).accounts = accounts;
   }
 }
 
-export function addDeployedProgram(program: NodeState['deployedPrograms'][0]): void {
-  const node = getActiveNode();
+export function addDeployedProgram(program: SolanaNodeState['deployedPrograms'][0]): void {
+  const node = getActiveSolanaNode();
   if (node) {
     node.deployedPrograms.push(program);
   }
 }
 
 export function addProgramAccount(account: ProgramAccount): void {
-  const node = getActiveNode();
+  const node = getActiveSolanaNode();
   if (node) {
     node.programAccounts.push(account);
   }
@@ -64,3 +80,6 @@ export function stopAllNodes(): void {
   state.nodes = [];
   state.activeNodeIndex = null;
 }
+
+// Re-export type guards
+export { isSolanaNode, isBitcoinNode };

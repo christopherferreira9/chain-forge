@@ -1,0 +1,43 @@
+{
+  "name": "@chain-forge/bitcoin",
+  "version": "0.1.0",
+  "description": "TypeScript client for Chain Forge Bitcoin local development",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "prepare": "yarn build"
+  },
+  "packageManager": "yarn@4.0.2",
+  "keywords": [
+    "bitcoin",
+    "blockchain",
+    "development",
+    "testing",
+    "local",
+    "regtest"
+  ],
+  "author": "Chain Forge Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/christopherferreira9/chain-forge"
+  },
+  "peerDependencies": {
+    "bitcoinjs-lib": "^6.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "bitcoinjs-lib": "^6.1.0",
+    "typescript": "^5.3.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,7 +1,7 @@
 {
   "name": "chain-forge-interactive-cli",
   "version": "1.0.0",
-  "description": "Interactive CLI for Chain Forge - explore Solana development interactively",
+  "description": "Interactive CLI for Chain Forge - explore Solana and Bitcoin development interactively",
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc",
@@ -12,6 +12,7 @@
   "packageManager": "yarn@4.0.2",
   "keywords": [
     "solana",
+    "bitcoin",
     "chain-forge",
     "cli",
     "interactive"
@@ -19,9 +20,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@chain-forge/bitcoin": "portal:../../npm/@chain-forge/bitcoin",
     "@chain-forge/solana": "portal:../../npm/@chain-forge/solana",
     "@inquirer/prompts": "^7.0.0",
     "@solana/web3.js": "^1.87.0",
+    "bitcoinjs-lib": "^6.1.0",
     "chalk": "^4.1.2",
     "cli-table3": "^0.6.5",
     "ora": "^5.4.1"

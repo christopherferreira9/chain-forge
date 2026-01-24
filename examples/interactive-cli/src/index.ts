@@ -5,7 +5,9 @@ import { deployProgram } from './actions/deploy-program';
 import { createProgramAccount } from './actions/create-program-account';
 import { interactProgram } from './actions/interact-program';
 import { sendFunds } from './actions/send-funds';
-import { getActiveNode, removeActiveNode, stopAllNodes, getState } from './state';
+import { bitcoinTransfer } from './actions/bitcoin-transfer';
+import { bitcoinMine } from './actions/bitcoin-mine';
+import { getActiveNode, removeActiveNode, stopAllNodes, getState, isSolanaNode, isBitcoinNode } from './state';
 import { input } from '@inquirer/prompts';
 import ora from 'ora';
 import { info, success, dim } from './ui/formatters';
@@ -20,8 +22,18 @@ async function refreshBalances(): Promise<void> {
 
   const spinner = ora('Refreshing balances...').start();
   try {
-    for (let i = 0; i < node.accounts.length; i++) {
-      node.accounts[i].balance = await node.client.getBalance(node.accounts[i].publicKey);
+    if (isSolanaNode(node)) {
+      for (let i = 0; i < node.accounts.length; i++) {
+        node.accounts[i].balance = await node.client.getBalance(node.accounts[i].publicKey);
+      }
+    } else if (isBitcoinNode(node)) {
+      const updatedAccounts = await node.client.getAccounts();
+      for (let i = 0; i < node.accounts.length; i++) {
+        const updated = updatedAccounts.find(a => a.address === node.accounts[i].address);
+        if (updated) {
+          node.accounts[i].balance = updated.balance;
+        }
+      }
     }
     spinner.succeed('Balances updated');
   } catch (err) {
@@ -33,15 +45,16 @@ async function stopNode(): Promise<void> {
   const node = getActiveNode();
   if (!node) return;
 
-  const spinner = ora('Stopping validator...').start();
+  const chainName = isSolanaNode(node) ? 'Solana validator' : 'Bitcoin node';
+  const spinner = ora(`Stopping ${chainName}...`).start();
   try {
     node.client.stop();
     removeActiveNode();
-    spinner.succeed('Validator stopped');
+    spinner.succeed(`${chainName} stopped`);
     console.log();
     await waitForEnter();
   } catch (err) {
-    spinner.fail('Failed to stop validator');
+    spinner.fail(`Failed to stop ${chainName}`);
     await waitForEnter();
   }
 }
@@ -61,6 +74,7 @@ async function handleMainMenu(): Promise<boolean> {
   const choice = await showMainMenu();
 
   switch (choice) {
+    // Solana-specific actions
     case 'deploy-program':
       await deployProgram();
       return true;
@@ -73,6 +87,16 @@ async function handleMainMenu(): Promise<boolean> {
     case 'send-funds':
       await sendFunds();
       return true;
+
+    // Bitcoin-specific actions
+    case 'send-btc':
+      await bitcoinTransfer();
+      return true;
+    case 'mine-blocks':
+      await bitcoinMine();
+      return true;
+
+    // Common actions
     case 'refresh':
       await refreshBalances();
       return true;
@@ -90,7 +114,7 @@ async function main(): Promise<void> {
     const state = getState();
     if (state.nodes.length > 0) {
       console.log('\n');
-      console.log(info('Stopping all validators...'));
+      console.log(info('Stopping all nodes...'));
       stopAllNodes();
     }
     console.log(success('Goodbye!'));
@@ -115,7 +139,7 @@ async function main(): Promise<void> {
   // Cleanup - stop all nodes on exit
   const state = getState();
   if (state.nodes.length > 0) {
-    console.log(info('Stopping all validators...'));
+    console.log(info('Stopping all nodes...'));
     stopAllNodes();
   }
 
