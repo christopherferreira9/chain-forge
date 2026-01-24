@@ -2,6 +2,51 @@
 
 This guide will walk you through your first steps with Chain Forge using Solana.
 
+## Prerequisites
+
+### Solana
+
+Install the Solana CLI tools:
+
+```bash
+sh -c "$(curl -sSfL https://release.solana.com/stable/install)"
+```
+
+Verify installation:
+
+```bash
+solana --version
+solana-test-validator --version
+```
+
+### Bitcoin
+
+Install Bitcoin Core (bitcoind):
+
+**macOS (Homebrew):**
+```bash
+brew install bitcoin
+```
+
+**Ubuntu/Debian:**
+```bash
+sudo apt-get update
+sudo apt-get install bitcoind
+```
+
+**Windows:**
+Download from [bitcoin.org](https://bitcoin.org/en/download) and add to PATH.
+
+Verify installation:
+
+```bash
+bitcoind --version
+```
+
+::: tip
+You only need to install the dependencies for the chains you plan to use.
+:::
+
 ## Quick Start
 
 ### 1. Start a Validator

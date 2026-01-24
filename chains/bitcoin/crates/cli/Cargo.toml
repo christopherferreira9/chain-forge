@@ -1,0 +1,23 @@
+[package]
+name = "chain-forge-bitcoin-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "cf-bitcoin"
+path = "src/main.rs"
+
+[dependencies]
+chain-forge-common.workspace = true
+chain-forge-config.workspace = true
+chain-forge-cli-utils.workspace = true
+chain-forge-bitcoin-core = { path = "../core" }
+chain-forge-bitcoin-accounts = { path = "../accounts" }
+chain-forge-bitcoin-rpc = { path = "../rpc" }
+clap.workspace = true
+tokio.workspace = true
+eyre.workspace = true
+serde_json.workspace = true
+tabled = "0.16"

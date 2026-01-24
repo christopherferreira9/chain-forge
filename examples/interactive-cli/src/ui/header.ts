@@ -1,6 +1,6 @@
 import chalk from 'chalk';
-import Table from 'cli-table3';
-import { getActiveNode } from '../state';
+import { getActiveNode, isSolanaNode, isBitcoinNode } from '../state';
+import { SolanaNodeState, BitcoinNodeState } from '../types';
 import { truncateAddress, formatBalance, dim, bold } from './formatters';
 
 const BOX_WIDTH = 65;
@@ -29,56 +29,10 @@ export function renderHeader(): void {
   console.log(chalk.cyan(paddedLine(bold('Chain Forge Interactive CLI'))));
 
   if (node) {
-    // Node info
-    const nodeInfo = `Nodes: ${chalk.green('1')} | Port: ${chalk.yellow(node.port.toString())} | Accounts: ${chalk.yellow(node.accounts.length.toString())}`;
-    console.log(chalk.cyan(paddedLine(nodeInfo)));
-
-    // Separator
-    console.log(chalk.cyan(horizontalLine('═', '╠', '╣')));
-
-    // Accounts header
-    const header = `${dim('#')}  │ ${dim('Address')}                                    │ ${dim('Balance')}`;
-    console.log(chalk.cyan(paddedLine(header)));
-
-    // Account rows
-    for (let i = 0; i < Math.min(node.accounts.length, 5); i++) {
-      const account = node.accounts[i];
-      const index = i.toString().padStart(2, ' ');
-      const address = truncateAddress(account.publicKey, 8);
-      const balance = formatBalance(account.balance).padStart(9, ' ');
-      const row = `${index} │ ${address.padEnd(42)} │ ${balance}`;
-      console.log(chalk.cyan(paddedLine(row)));
-    }
-
-    if (node.accounts.length > 5) {
-      console.log(chalk.cyan(paddedLine(dim(`   ... and ${node.accounts.length - 5} more accounts`))));
-    }
-
-    // Programs section
-    if (node.deployedPrograms.length > 0) {
-      console.log(chalk.cyan(horizontalLine('─', '╟', '╢')));
-      console.log(chalk.cyan(paddedLine(dim('Deployed Programs:'))));
-      for (const program of node.deployedPrograms) {
-        const deployerShort = truncateAddress(program.deployerAddress, 4);
-        const programInfo = `  ${program.name} → ${truncateAddress(program.programId, 8)} ${dim(`by ${deployerShort}`)}`;
-        console.log(chalk.cyan(paddedLine(programInfo)));
-      }
-    }
-
-    // Program accounts section
-    if (node.programAccounts.length > 0) {
-      console.log(chalk.cyan(horizontalLine('─', '╟', '╢')));
-      console.log(chalk.cyan(paddedLine(dim(`Program Accounts (${node.programAccounts.length}):`))));
-      for (const pa of node.programAccounts.slice(0, 3)) {
-        // Find the program name for this account
-        const program = node.deployedPrograms.find((p) => p.programId === pa.programId);
-        const programName = program ? program.name : truncateAddress(pa.programId, 4);
-        const accountInfo = `  ${truncateAddress(pa.address, 8)} ${dim(`owned by ${programName}`)}`;
-        console.log(chalk.cyan(paddedLine(accountInfo)));
-      }
-      if (node.programAccounts.length > 3) {
-        console.log(chalk.cyan(paddedLine(dim(`   ... and ${node.programAccounts.length - 3} more`))));
-      }
+    if (isSolanaNode(node)) {
+      renderSolanaHeader(node);
+    } else if (isBitcoinNode(node)) {
+      renderBitcoinHeader(node);
     }
   } else {
     console.log(chalk.cyan(paddedLine(dim('No active node'))));
@@ -87,4 +41,87 @@ export function renderHeader(): void {
   // Bottom border
   console.log(chalk.cyan(horizontalLine('═', '╚', '╝')));
   console.log();
+}
+
+function renderSolanaHeader(node: SolanaNodeState): void {
+  // Node info
+  const chainBadge = chalk.magenta('[Solana]');
+  const nodeInfo = `${chainBadge} Port: ${chalk.yellow(node.port.toString())} | Accounts: ${chalk.yellow(node.accounts.length.toString())}`;
+  console.log(chalk.cyan(paddedLine(nodeInfo)));
+
+  // Separator
+  console.log(chalk.cyan(horizontalLine('═', '╠', '╣')));
+
+  // Accounts header
+  const header = `${dim('#')}  │ ${dim('Address')}                                    │ ${dim('Balance')}`;
+  console.log(chalk.cyan(paddedLine(header)));
+
+  // Account rows
+  for (let i = 0; i < Math.min(node.accounts.length, 5); i++) {
+    const account = node.accounts[i];
+    const index = i.toString().padStart(2, ' ');
+    const address = truncateAddress(account.publicKey, 8);
+    const balance = formatBalance(account.balance).padStart(9, ' ');
+    const row = `${index} │ ${address.padEnd(42)} │ ${balance}`;
+    console.log(chalk.cyan(paddedLine(row)));
+  }
+
+  if (node.accounts.length > 5) {
+    console.log(chalk.cyan(paddedLine(dim(`   ... and ${node.accounts.length - 5} more accounts`))));
+  }
+
+  // Programs section
+  if (node.deployedPrograms.length > 0) {
+    console.log(chalk.cyan(horizontalLine('─', '╟', '╢')));
+    console.log(chalk.cyan(paddedLine(dim('Deployed Programs:'))));
+    for (const program of node.deployedPrograms) {
+      const deployerShort = truncateAddress(program.deployerAddress, 4);
+      const programInfo = `  ${program.name} → ${truncateAddress(program.programId, 8)} ${dim(`by ${deployerShort}`)}`;
+      console.log(chalk.cyan(paddedLine(programInfo)));
+    }
+  }
+
+  // Program accounts section
+  if (node.programAccounts.length > 0) {
+    console.log(chalk.cyan(horizontalLine('─', '╟', '╢')));
+    console.log(chalk.cyan(paddedLine(dim(`Program Accounts (${node.programAccounts.length}):`))));
+    for (const pa of node.programAccounts.slice(0, 3)) {
+      // Find the program name for this account
+      const program = node.deployedPrograms.find((p) => p.programId === pa.programId);
+      const programName = program ? program.name : truncateAddress(pa.programId, 4);
+      const accountInfo = `  ${truncateAddress(pa.address, 8)} ${dim(`owned by ${programName}`)}`;
+      console.log(chalk.cyan(paddedLine(accountInfo)));
+    }
+    if (node.programAccounts.length > 3) {
+      console.log(chalk.cyan(paddedLine(dim(`   ... and ${node.programAccounts.length - 3} more`))));
+    }
+  }
+}
+
+function renderBitcoinHeader(node: BitcoinNodeState): void {
+  // Node info
+  const chainBadge = chalk.yellow('[Bitcoin]');
+  const nodeInfo = `${chainBadge} Port: ${chalk.yellow(node.port.toString())} | Accounts: ${chalk.yellow(node.accounts.length.toString())}`;
+  console.log(chalk.cyan(paddedLine(nodeInfo)));
+
+  // Separator
+  console.log(chalk.cyan(horizontalLine('═', '╠', '╣')));
+
+  // Accounts header (BTC addresses are longer)
+  const header = `${dim('#')}  │ ${dim('Address')}                                    │ ${dim('BTC')}`;
+  console.log(chalk.cyan(paddedLine(header)));
+
+  // Account rows
+  for (let i = 0; i < Math.min(node.accounts.length, 5); i++) {
+    const account = node.accounts[i];
+    const index = i.toString().padStart(2, ' ');
+    const address = truncateAddress(account.address, 8);
+    const balance = formatBalance(account.balance).padStart(9, ' ');
+    const row = `${index} │ ${address.padEnd(42)} │ ${balance}`;
+    console.log(chalk.cyan(paddedLine(row)));
+  }
+
+  if (node.accounts.length > 5) {
+    console.log(chalk.cyan(paddedLine(dim(`   ... and ${node.accounts.length - 5} more accounts`))));
+  }
 }
