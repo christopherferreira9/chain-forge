@@ -550,7 +550,10 @@ impl ChainProvider for BitcoinProvider {
                 let _ = info.mark_stopped();
             }
 
-            println!("🛑 Bitcoin regtest node stopped (instance: {})", self.config.instance_id);
+            println!(
+                "🛑 Bitcoin regtest node stopped (instance: {})",
+                self.config.instance_id
+            );
         }
 
         self.rpc_client = None;

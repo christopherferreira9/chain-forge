@@ -140,8 +140,7 @@ struct AccountDisplay {
 
 /// Get RPC client for a specific instance
 fn get_rpc_client_for_instance(instance_id: &str) -> Result<BitcoinRpcClient> {
-    let info = InstanceInfo::load(instance_id)
-        .map_err(|e| eyre::eyre!("{}", e))?;
+    let info = InstanceInfo::load(instance_id).map_err(|e| eyre::eyre!("{}", e))?;
 
     BitcoinRpcClient::new_with_wallet(
         info.rpc_url,
@@ -266,13 +265,19 @@ async fn main() -> Result<()> {
 
                     if !balances_updated {
                         println!();
-                        println!("Note: Balances shown are from startup cache (node not reachable)");
+                        println!(
+                            "Note: Balances shown are from startup cache (node not reachable)"
+                        );
                     }
                 }
             }
         }
 
-        Commands::Fund { address, amount, instance } => {
+        Commands::Fund {
+            address,
+            amount,
+            instance,
+        } => {
             let rpc_client = get_rpc_client_for_instance(&instance)?;
 
             if !rpc_client.is_node_running() {
@@ -310,7 +315,12 @@ async fn main() -> Result<()> {
             }
         }
 
-        Commands::Transfer { from, to, amount, instance } => {
+        Commands::Transfer {
+            from,
+            to,
+            amount,
+            instance,
+        } => {
             let rpc_client = get_rpc_client_for_instance(&instance)?;
 
             if !rpc_client.is_node_running() {
@@ -361,7 +371,11 @@ async fn main() -> Result<()> {
             }
         }
 
-        Commands::Mine { blocks, address, instance } => {
+        Commands::Mine {
+            blocks,
+            address,
+            instance,
+        } => {
             let rpc_client = get_rpc_client_for_instance(&instance)?;
 
             if !rpc_client.is_node_running() {
@@ -378,9 +392,9 @@ async fn main() -> Result<()> {
                 Some(addr) => addr,
                 None => {
                     // Get a wallet address for mining (not a user account)
-                    rpc_client.get_new_address(Some("mining")).map_err(|e| {
-                        eyre::eyre!("Failed to get mining address: {}", e)
-                    })?
+                    rpc_client
+                        .get_new_address(Some("mining"))
+                        .map_err(|e| eyre::eyre!("Failed to get mining address: {}", e))?
                 }
             };
 
@@ -418,20 +432,34 @@ async fn main() -> Result<()> {
             // Try to load instance info
             match InstanceInfo::load(&instance) {
                 Ok(info) => {
-                    println!("  Status: {}", if info.running { "Running (may be stale)" } else { "Stopped" });
+                    println!(
+                        "  Status: {}",
+                        if info.running {
+                            "Running (may be stale)"
+                        } else {
+                            "Stopped"
+                        }
+                    );
                     println!("  RPC URL: {}", info.rpc_url);
                     println!("  RPC Port: {}", info.rpc_port);
                     println!("  P2P Port: {}", info.p2p_port);
                 }
                 Err(_) => {
                     println!("  Status: Not initialized");
-                    println!("  Run 'cf-bitcoin start --instance {}' to create this instance", instance);
+                    println!(
+                        "  Run 'cf-bitcoin start --instance {}' to create this instance",
+                        instance
+                    );
                 }
             }
 
             println!();
-            println!("Instance Directory: {:?}",
-                Config::data_dir().join("bitcoin").join("instances").join(&instance)
+            println!(
+                "Instance Directory: {:?}",
+                Config::data_dir()
+                    .join("bitcoin")
+                    .join("instances")
+                    .join(&instance)
             );
 
             // Also show global config if available
@@ -450,7 +478,10 @@ async fn main() -> Result<()> {
 
         Commands::Stop { instance } => {
             println!("Note: Use Ctrl+C to stop the node running in 'start' mode");
-            println!("      Instance '{}' should be stopped from its terminal", instance);
+            println!(
+                "      Instance '{}' should be stopped from its terminal",
+                instance
+            );
 
             // Mark instance as stopped if info exists
             if let Ok(mut info) = InstanceInfo::load(&instance) {

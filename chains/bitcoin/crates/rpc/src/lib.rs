@@ -182,9 +182,7 @@ impl BitcoinRpcClient {
             .map_err(|e| ChainError::Rpc(format!("Failed to scan UTXO set: {}", e)))?;
 
         // Extract total amount from scan result
-        let total = scan_result["total_amount"]
-            .as_f64()
-            .unwrap_or(0.0);
+        let total = scan_result["total_amount"].as_f64().unwrap_or(0.0);
 
         Ok(total)
     }
@@ -253,8 +251,8 @@ impl BitcoinRpcClient {
             .call(
                 "listunspent",
                 &[
-                    serde_json::json!(1),      // minconf
-                    serde_json::json!(9999999), // maxconf
+                    serde_json::json!(1),              // minconf
+                    serde_json::json!(9999999),        // maxconf
                     serde_json::json!([from_address]), // addresses to filter
                 ],
             )
@@ -268,7 +266,10 @@ impl BitcoinRpcClient {
         }
 
         // Calculate total available
-        let total_available: f64 = utxos.iter().map(|u| u["amount"].as_f64().unwrap_or(0.0)).sum();
+        let total_available: f64 = utxos
+            .iter()
+            .map(|u| u["amount"].as_f64().unwrap_or(0.0))
+            .sum();
 
         // Estimate fee (simple: 0.0001 BTC per KB, ~250 bytes per input)
         let estimated_fee = 0.0001 * (utxos.len() as f64 * 0.25).max(0.25);
@@ -314,7 +315,10 @@ impl BitcoinRpcClient {
             .client
             .call(
                 "createrawtransaction",
-                &[serde_json::json!(selected_utxos), serde_json::json!(outputs)],
+                &[
+                    serde_json::json!(selected_utxos),
+                    serde_json::json!(outputs),
+                ],
             )
             .map_err(|e| ChainError::Rpc(format!("Failed to create raw transaction: {}", e)))?;
 
