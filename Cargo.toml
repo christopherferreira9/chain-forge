@@ -45,7 +45,7 @@ bs58 = "0.5"
 # Bitcoin-specific
 bitcoin = { version = "0.32", features = ["serde", "rand"] }
 bitcoincore-rpc = "0.19"
-secp256k1 = { version = "0.29", features = ["rand", "serde"] }
+secp256k1 = { version = "0.31", features = ["rand", "serde"] }
 
 # OpenSSL - vendored for Windows compatibility
 openssl = { version = "0.10", features = ["vendored"] }
