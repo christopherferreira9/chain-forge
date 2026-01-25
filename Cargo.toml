@@ -37,7 +37,7 @@ rand = "0.8"
 
 # Solana-specific
 solana-sdk = "2.0"
-solana-client = "2.0"
+solana-client = "3.1"
 bip39 = "2.0"
 ed25519-dalek = "2.1"
 bs58 = "0.5"
