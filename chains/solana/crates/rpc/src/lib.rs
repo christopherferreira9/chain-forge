@@ -348,9 +348,11 @@ impl SolanaRpcClient {
             let account_keys: Vec<String> = match &tx.transaction.transaction {
                 solana_transaction_status_client_types::EncodedTransaction::Json(ui_tx) => {
                     match &ui_tx.message {
-                        solana_transaction_status_client_types::UiMessage::Parsed(parsed) => {
-                            parsed.account_keys.iter().map(|k| k.pubkey.clone()).collect()
-                        }
+                        solana_transaction_status_client_types::UiMessage::Parsed(parsed) => parsed
+                            .account_keys
+                            .iter()
+                            .map(|k| k.pubkey.clone())
+                            .collect(),
                         solana_transaction_status_client_types::UiMessage::Raw(raw) => {
                             raw.account_keys.clone()
                         }

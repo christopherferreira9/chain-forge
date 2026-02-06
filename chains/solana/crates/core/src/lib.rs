@@ -301,12 +301,12 @@ impl SolanaProvider {
         // Create log files for capturing startup output and errors
         let log_dir = self.config.instance_dir();
         std::fs::create_dir_all(&log_dir).ok();
-        let stdout_file = std::fs::File::create(log_dir.join("validator_stdout.log"))
-            .map_err(|e| {
+        let stdout_file =
+            std::fs::File::create(log_dir.join("validator_stdout.log")).map_err(|e| {
                 ChainError::NodeManagement(format!("Failed to create stdout log: {}", e))
             })?;
-        let stderr_file = std::fs::File::create(log_dir.join("validator_stderr.log"))
-            .map_err(|e| {
+        let stderr_file =
+            std::fs::File::create(log_dir.join("validator_stderr.log")).map_err(|e| {
                 ChainError::NodeManagement(format!("Failed to create stderr log: {}", e))
             })?;
 
@@ -418,25 +418,25 @@ impl ChainProvider for SolanaProvider {
 
                     // Check the validator's own log for the real error
                     // (panics and internal errors go there, not to stdout/stderr)
-                    let validator_log_path =
-                        log_dir.join("test-ledger").join("validator.log");
-                    let error_detail = std::fs::read_to_string(&validator_log_path)
-                        .ok()
-                        .and_then(|content| {
-                            // Extract panic or error lines
-                            let errors: Vec<&str> = content
-                                .lines()
-                                .filter(|l| {
-                                    l.contains("panicked at")
-                                        || (l.contains("ERROR") && !l.contains("metrics"))
-                                })
-                                .collect();
-                            if errors.is_empty() {
-                                None
-                            } else {
-                                Some(errors.join("\n"))
-                            }
-                        });
+                    let validator_log_path = log_dir.join("test-ledger").join("validator.log");
+                    let error_detail =
+                        std::fs::read_to_string(&validator_log_path)
+                            .ok()
+                            .and_then(|content| {
+                                // Extract panic or error lines
+                                let errors: Vec<&str> = content
+                                    .lines()
+                                    .filter(|l| {
+                                        l.contains("panicked at")
+                                            || (l.contains("ERROR") && !l.contains("metrics"))
+                                    })
+                                    .collect();
+                                if errors.is_empty() {
+                                    None
+                                } else {
+                                    Some(errors.join("\n"))
+                                }
+                            });
 
                     let error_msg = match error_detail {
                         Some(detail) => {

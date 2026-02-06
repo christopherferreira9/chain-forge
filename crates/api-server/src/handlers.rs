@@ -1047,7 +1047,9 @@ pub async fn get_transaction_detail(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chain_forge_bitcoin_rpc::{BitcoinTransactionDetail, BitcoinTransactionInfo, BitcoinTxDetailEntry};
+    use chain_forge_bitcoin_rpc::{
+        BitcoinTransactionDetail, BitcoinTransactionInfo, BitcoinTxDetailEntry,
+    };
 
     #[test]
     fn test_api_response_success() {
@@ -1149,7 +1151,10 @@ mod tests {
         assert_eq!(mapped.signature, "btctxid");
         assert_eq!(mapped.slot, 101);
         assert_eq!(mapped.block_time, Some(1700000000));
-        assert_eq!(mapped.confirmation_status, Some("3 confirmations".to_string()));
+        assert_eq!(
+            mapped.confirmation_status,
+            Some("3 confirmations".to_string())
+        );
         assert_eq!(mapped.account, "bcrt1qknown");
         assert!(mapped.err.is_none());
     }

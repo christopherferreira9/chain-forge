@@ -530,10 +530,10 @@ impl BitcoinRpcClient {
             .call(
                 "listtransactions",
                 &[
-                    serde_json::json!("*"),     // all labels
-                    serde_json::json!(count),   // count
-                    serde_json::json!(0),       // skip
-                    serde_json::json!(true),    // include_watchonly
+                    serde_json::json!("*"),   // all labels
+                    serde_json::json!(count), // count
+                    serde_json::json!(0),     // skip
+                    serde_json::json!(true),  // include_watchonly
                 ],
             )
             .map_err(|e| ChainError::Rpc(format!("Failed to list transactions: {}", e)))?;
@@ -574,7 +574,7 @@ impl BitcoinRpcClient {
                 "gettransaction",
                 &[
                     serde_json::json!(txid),
-                    serde_json::json!(true),    // include_watchonly
+                    serde_json::json!(true), // include_watchonly
                 ],
             )
             .map_err(|e| ChainError::Rpc(format!("Failed to get transaction {}: {}", txid, e)))?;
