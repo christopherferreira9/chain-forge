@@ -3,6 +3,7 @@ members = [
     "crates/common",
     "crates/config",
     "crates/cli-utils",
+    "crates/api-server",
     "chains/solana/crates/cli",
     "chains/solana/crates/core",
     "chains/solana/crates/accounts",
@@ -38,6 +39,7 @@ rand = "0.8"
 # Solana-specific
 solana-sdk = "2.0"
 solana-client = "2.0"
+solana-transaction-status-client-types = "2.0"
 bip39 = "2.0"
 ed25519-dalek = "2.1"
 bs58 = "0.5"
@@ -53,6 +55,16 @@ openssl = { version = "0.10", features = ["vendored"] }
 # CLI utilities
 tabled = "0.16"
 
+# Date/time
+chrono = { version = "0.4", features = ["serde"] }
+
+# File locking
+fs2 = "0.4"
+
+# Web server
+axum = "0.8"
+tower-http = { version = "0.6", features = ["cors"] }
+
 # Workspace crates
 chain-forge-common = { path = "crates/common" }
 chain-forge-config = { path = "crates/config" }
@@ -60,3 +72,7 @@ chain-forge-cli-utils = { path = "crates/cli-utils" }
 chain-forge-solana-accounts = { path = "chains/solana/crates/accounts" }
 chain-forge-solana-rpc = { path = "chains/solana/crates/rpc" }
 chain-forge-solana-core = { path = "chains/solana/crates/core" }
+chain-forge-bitcoin-accounts = { path = "chains/bitcoin/crates/accounts" }
+chain-forge-bitcoin-rpc = { path = "chains/bitcoin/crates/rpc" }
+chain-forge-bitcoin-core = { path = "chains/bitcoin/crates/core" }
+chain-forge-api-server = { path = "crates/api-server" }

@@ -2,7 +2,7 @@ use chain_forge_bitcoin_accounts::AccountsStorage;
 use chain_forge_bitcoin_core::{BitcoinConfig, BitcoinProvider, InstanceInfo};
 use chain_forge_bitcoin_rpc::BitcoinRpcClient;
 use chain_forge_cli_utils::OutputFormat;
-use chain_forge_common::ChainProvider;
+use chain_forge_common::{validate_name, ChainProvider};
 use chain_forge_config::Config;
 use clap::{Parser, Subcommand};
 use eyre::Result;
@@ -24,6 +24,10 @@ enum Commands {
         /// Instance ID for isolation (allows multiple nodes with separate state)
         #[arg(short, long, default_value = "default")]
         instance: String,
+
+        /// Human-readable name for the instance
+        #[arg(short = 'n', long)]
+        name: Option<String>,
 
         /// Number of accounts to generate
         #[arg(short, long, default_value = "10")]
@@ -56,6 +60,10 @@ enum Commands {
         /// Show verbose bitcoind output
         #[arg(short, long, default_value = "false")]
         verbose: bool,
+
+        /// Keep instance data on stop (default: clean up)
+        #[arg(long, default_value = "false")]
+        keep_data: bool,
     },
 
     /// List all generated accounts with their balances
@@ -168,6 +176,7 @@ async fn main() -> Result<()> {
     match cli.command {
         Commands::Start {
             instance,
+            name,
             accounts,
             balance,
             rpc_port,
@@ -176,7 +185,22 @@ async fn main() -> Result<()> {
             rpc_user,
             rpc_password,
             verbose,
+            keep_data,
         } => {
+            // Validate instance name
+            if let Err(e) = validate_name(&instance) {
+                eprintln!("❌ Invalid instance name: {}", e);
+                std::process::exit(1);
+            }
+
+            // Validate display name if provided
+            if let Some(ref n) = name {
+                if let Err(e) = validate_name(n) {
+                    eprintln!("❌ Invalid display name: {}", e);
+                    std::process::exit(1);
+                }
+            }
+
             // Create instance-specific config
             let mut config = BitcoinConfig::with_instance(&instance);
             config.rpc_url = format!("http://localhost:{}", rpc_port);
@@ -188,8 +212,10 @@ async fn main() -> Result<()> {
             config.rpc_user = rpc_user;
             config.rpc_password = rpc_password;
             config.verbose = verbose;
+            config.name = name;
 
             let mut provider = BitcoinProvider::with_config(config.clone());
+            provider.set_keep_data(keep_data);
             provider.start(config)?;
 
             println!("💡 Tip: Keep this terminal open to keep the node running");
@@ -440,9 +466,13 @@ async fn main() -> Result<()> {
                             "Stopped"
                         }
                     );
+                    if let Some(name) = &info.name {
+                        println!("  Name: {}", name);
+                    }
                     println!("  RPC URL: {}", info.rpc_url);
                     println!("  RPC Port: {}", info.rpc_port);
                     println!("  P2P Port: {}", info.p2p_port);
+                    println!("  Accounts: {}", info.accounts_count);
                 }
                 Err(_) => {
                     println!("  Status: Not initialized");

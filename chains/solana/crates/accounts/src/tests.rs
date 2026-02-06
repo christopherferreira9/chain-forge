@@ -176,3 +176,40 @@ fn test_multiple_account_indices() {
     assert_ne!(account_0.public_key, account_100.public_key);
     assert_ne!(account_5.public_key, account_100.public_key);
 }
+
+#[test]
+fn test_accounts_storage_with_path() {
+    let temp_dir = TempDir::new().unwrap();
+    let custom_path = temp_dir.path().join("custom_accounts.json");
+    let storage = AccountsStorage::with_path(custom_path.clone());
+
+    let generator = AccountGenerator::new().unwrap();
+    let accounts = generator.generate_accounts(2).unwrap();
+
+    // Save and verify path is used
+    storage.save(&accounts).unwrap();
+    assert!(custom_path.exists());
+    assert_eq!(storage.accounts_file(), custom_path.as_path());
+
+    // Load and verify
+    let loaded = storage.load().unwrap();
+    assert_eq!(loaded.len(), 2);
+}
+
+#[test]
+fn test_accounts_storage_with_nested_path() {
+    let temp_dir = TempDir::new().unwrap();
+    let nested_path = temp_dir
+        .path()
+        .join("instances")
+        .join("my-instance")
+        .join("accounts.json");
+    let storage = AccountsStorage::with_path(nested_path.clone());
+
+    let generator = AccountGenerator::new().unwrap();
+    let accounts = generator.generate_accounts(1).unwrap();
+
+    // Should create nested directories
+    storage.save(&accounts).unwrap();
+    assert!(nested_path.exists());
+}

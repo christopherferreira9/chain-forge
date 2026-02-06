@@ -10,6 +10,7 @@ chain-forge-common.workspace = true
 chain-forge-solana-accounts.workspace = true
 solana-sdk.workspace = true
 solana-client.workspace = true
+solana-transaction-status-client-types.workspace = true
 tokio.workspace = true
 eyre.workspace = true
 openssl.workspace = true

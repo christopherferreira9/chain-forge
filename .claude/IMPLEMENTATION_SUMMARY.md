@@ -22,24 +22,34 @@ chain-forge/
 │   ├── common/                         # Shared traits and types
 │   │   ├── src/chain.rs                # ChainProvider trait
 │   │   ├── src/error.rs                # Common error types
+│   │   ├── src/registry.rs             # NodeRegistry for tracking nodes
+│   │   ├── src/validation.rs           # Input validation
 │   │   └── src/types.rs                # Common types (Network, etc.)
 │   ├── config/                         # Configuration system
 │   │   └── src/lib.rs                  # TOML config loading
-│   └── cli-utils/                      # CLI utilities
-│       └── src/format.rs               # Output formatting
+│   ├── cli-utils/                      # CLI utilities
+│   │   └── src/format.rs               # Output formatting
+│   └── api-server/                     # REST API server
+│       ├── src/main.rs                 # cf-api binary entry point
+│       ├── src/server.rs               # Axum server setup
+│       ├── src/routes.rs               # Route definitions (11 endpoints)
+│       └── src/handlers.rs             # Request handlers
 │
 ├── chains/                             # Chain implementations
-│   └── solana/                         # Solana implementation
-│       ├── README.md                   # Solana-specific docs
+│   ├── solana/                         # Solana implementation
+│   │   ├── README.md
+│   │   └── crates/
+│   │       ├── accounts/               # BIP39/BIP44 key derivation
+│   │       ├── rpc/                    # Solana RPC client wrapper
+│   │       ├── core/                   # ChainProvider implementation
+│   │       └── cli/                    # cf-solana binary
+│   └── bitcoin/                        # Bitcoin implementation
+│       ├── README.md
 │       └── crates/
-│           ├── accounts/               # BIP39/BIP44 key derivation
-│           │   └── src/lib.rs          # Account generation logic
-│           ├── rpc/                    # RPC client wrapper
-│           │   └── src/lib.rs          # Solana RPC operations
-│           ├── core/                   # Core provider logic
-│           │   └── src/lib.rs          # ChainProvider implementation
-│           └── cli/                    # CLI binary
-│               └── src/main.rs         # cf-solana command
+│           ├── accounts/               # BIP39/BIP84 P2WPKH key derivation
+│           ├── rpc/                    # Bitcoin Core RPC client wrapper
+│           ├── core/                   # ChainProvider implementation
+│           └── cli/                    # cf-bitcoin binary
 │
 ├── npm/                                # NPM packages
 │   └── @chain-forge/solana/            # TypeScript package
@@ -51,15 +61,36 @@ chain-forge/
 │           ├── types.ts                # TypeScript types
 │           └── client.ts               # SolanaClient class
 │
+├── development/                        # Development tools
+│   └── dashboard/                      # Web dashboard
+│       ├── package.json                # React 18, Vite, TailwindCSS
+│       ├── vite.config.ts              # Vite config (proxies /api to :3001)
+│       └── src/
+│           ├── App.tsx                 # Routing and layout
+│           ├── pages/
+│           │   ├── Dashboard.tsx       # Node grid overview
+│           │   └── NodeDetail.tsx      # Accounts + Transactions tabs
+│           ├── components/
+│           │   ├── NodeGrid.tsx        # Responsive node card grid
+│           │   ├── NodeCard.tsx        # Individual node card
+│           │   ├── NewNodeForm.tsx     # Start node form
+│           │   ├── AccountsList.tsx    # Account table with fund button
+│           │   ├── TransactionsList.tsx# Transaction table with detail expansion
+│           │   └── NodeStatus.tsx      # Status indicator dot
+│           └── api/
+│               ├── client.ts           # REST API client functions
+│               ├── types.ts            # TypeScript interfaces
+│               └── hooks.ts            # React Query hooks (auto-refresh)
+│
 ├── docs/                               # Documentation
+│   ├── api/
+│   │   ├── overview.md                 # TypeScript API overview
+│   │   └── rest-api.md                 # REST API reference
 │   └── GETTING_STARTED.md              # Getting started guide
 │
 └── examples/                           # Example projects
-    └── typescript-basic/               # Basic TypeScript example
-        ├── package.json
-        ├── tsconfig.json
-        ├── README.md
-        └── src/index.ts
+    ├── typescript-basic/               # Basic TypeScript example
+    └── interactive-cli/                # Interactive CLI example
 ```
 
 ### 2. Core Features
@@ -68,6 +99,8 @@ chain-forge/
 
 - **ChainProvider Trait**: Abstract interface that all blockchain implementations must implement
 - **Error Handling**: Comprehensive error types with `ChainError` enum
+- **NodeRegistry**: JSON-based registry tracking all running nodes across chains (`~/.chain-forge/registry.json`)
+- **Input Validation**: Name sanitization and validation utilities
 - **Configuration System**: TOML-based configuration with project and global config support
 - **CLI Utilities**: Output formatting (JSON, Table) for consistent CLI experience
 
@@ -137,6 +170,68 @@ chain-forge/
 - **Integration**: Seamless integration with `@solana/web3.js`
 - **Types**: Full TypeScript type definitions
 
+#### Bitcoin Implementation
+
+##### Account Generation (`chains/bitcoin/crates/accounts`)
+
+- **BIP39 Mnemonic**: 12-word mnemonic phrase generation and recovery
+- **BIP84 Derivation**: Native SegWit derivation path `m/84'/1'/0'/0/index` (P2WPKH, bech32)
+- **WIF Export**: Private keys exportable in Wallet Import Format
+- **Storage**: Save/load accounts to `~/.chain-forge/bitcoin/instances/{id}/accounts.json`
+
+##### RPC Client (`chains/bitcoin/crates/rpc`)
+
+- **Connection Management**: Wrapper around `bitcoincore-rpc` with wallet support
+- **Operations**:
+  - Check node status, get blockchain info
+  - Create/load wallets, import descriptors
+  - Get balances (via `scantxoutset` for direct UTXO query)
+  - Mine blocks, send transactions
+  - List transactions (`listtransactions` with category filtering)
+  - Get transaction details (`gettransaction` with per-address entries)
+  - Send from specific address (UTXO selection + raw tx signing)
+
+##### Core Logic (`chains/bitcoin/crates/core`)
+
+- **BitcoinProvider**: Full implementation of `ChainProvider` trait
+- **Node Management**:
+  - Start `bitcoind` in regtest mode
+  - Create `chain-forge` descriptor wallet
+  - Mine 101 blocks for spendable coinbase
+  - Import account descriptors with private keys
+  - Fund accounts via wallet sends + confirmation mining
+  - Clean shutdown and optional data cleanup
+- **Instance Info**: Persists RPC credentials for API server access
+
+##### CLI Binary (`chains/bitcoin/crates/cli`)
+
+- **Binary Name**: `cf-bitcoin`
+- **Commands**: start, accounts, fund, config, stop (mirrors cf-solana)
+
+#### REST API Server (`crates/api-server`)
+
+- **Binary Name**: `cf-api`
+- **Framework**: Axum with Tokio async runtime
+- **Default Port**: 3001 (configurable via `--port`)
+- **CORS**: Permissive (all origins) for dashboard communication
+- **Endpoints**: 11 total covering node management, accounts, transactions, funding, health checks, registry cleanup
+- **Chain-Agnostic**: Same URL patterns for Solana and Bitcoin; handlers branch on `ChainType`
+- **Live Data**: Fetches balances and transactions from running nodes via RPC
+
+#### Web Dashboard (`development/dashboard`)
+
+- **Tech Stack**: React 18, TypeScript, Vite 5, TailwindCSS, React Query
+- **Pages**:
+  - Dashboard: Node grid with status indicators, stats bar, create node form
+  - NodeDetail: Tabbed view with Accounts and Transactions
+- **Features**:
+  - Auto-refresh (5s nodes, 10s transactions)
+  - Dark/light theme with localStorage persistence
+  - Chain-aware UI (SOL/BTC units, Signature/TxID labels, Slot/Block headers)
+  - Fund accounts inline, copy addresses, expandable transaction details
+  - Responsive design (mobile through desktop)
+- **API Communication**: Vite proxies `/api` to `localhost:3001`
+
 ### 3. Documentation
 
 Created comprehensive documentation:
@@ -169,20 +264,26 @@ The architecture supports adding new chains (Bitcoin, Ethereum, etc.) through:
 3. **Isolated Crates**: Each chain lives in its own directory
 4. **Shared Utilities**: Common code in `crates/common`
 
-### Adding a New Chain (Future)
+### Current Chain Implementations
 
-To add Bitcoin support:
+| Chain | Status | CLI Binary | Accounts | RPC | Core |
+|-------|--------|-----------|----------|-----|------|
+| Solana | Complete | `cf-solana` | BIP44 (`m/44'/501'/n'/0'`) | solana-client | solana-test-validator |
+| Bitcoin | Complete | `cf-bitcoin` | BIP84 (`m/84'/1'/0'/0/n`) | bitcoincore-rpc | bitcoind regtest |
+
+### Adding a New Chain (e.g., Ethereum)
 
 ```bash
-mkdir -p chains/bitcoin/crates/{cli,core,wallet,rpc}
+mkdir -p chains/ethereum/crates/{cli,core,accounts,rpc}
 ```
 
 Implement:
-1. Bitcoin-specific account/wallet management
-2. Bitcoin RPC client wrapper
-3. Core logic implementing `ChainProvider`
-4. CLI binary (`cf-bitcoin`)
-5. TypeScript package (`@chain-forge/bitcoin`)
+1. Chain-specific account generation (crate: accounts)
+2. RPC client wrapper (crate: rpc)
+3. Core logic implementing `ChainProvider` (crate: core)
+4. CLI binary (crate: cli, e.g., `cf-ethereum`)
+5. Add chain to API server handlers (branch on `ChainType`)
+6. Update dashboard components for chain-specific labels/units
 
 ## 📦 Dependencies
 
@@ -273,27 +374,32 @@ Implement:
 
 ### Multi-Chain Expansion
 
-1. **Bitcoin**: Add Bitcoin regtest support
+1. ~~**Bitcoin**: Add Bitcoin regtest support~~ ✅ Done
 2. **Ethereum**: Add Anvil-style Ethereum support
 3. **Cosmos**: Add Cosmos SDK support
 4. **Unified CLI**: `chain-forge start --chain solana|bitcoin|ethereum`
 
 ## 📊 Metrics
 
-### Lines of Code
+### Crates
 
-- **Rust**: ~2,500 lines
-- **TypeScript**: ~400 lines
-- **Documentation**: ~2,000 lines
-- **Total**: ~4,900 lines
+- **Shared**: common, config, cli-utils, api-server (4 crates)
+- **Solana**: accounts, rpc, core, cli (4 crates)
+- **Bitcoin**: accounts, rpc, core, cli (4 crates)
+- **Total**: 12 Rust crates
 
-### Files Created
+### Test Coverage
 
-- Rust source files: 18
-- TypeScript files: 5
-- Configuration files: 8
-- Documentation files: 9
-- **Total**: 40+ files
+- **127+ unit tests** across workspace
+- Key coverage areas: accounts, config, common types, registry, RPC structs, API response mapping
+
+### Lines of Code (approximate)
+
+- **Rust**: ~6,000+ lines (12 crates)
+- **TypeScript (NPM)**: ~400 lines
+- **TypeScript (Dashboard)**: ~1,500+ lines (React app)
+- **Documentation**: ~3,000+ lines
+- **Total**: ~11,000+ lines
 
 ## ✅ Plan Completion Checklist
 
@@ -371,6 +477,6 @@ This implementation draws inspiration from:
 
 **Implementation Status**: ✅ **Complete**
 
-**Date**: January 2026
+**Date**: February 2026
 
-**Total Implementation Time**: Full implementation of multi-chain development tool suite with Solana MVP
+**Total Implementation Time**: Full implementation of multi-chain development tool suite with Solana + Bitcoin support, REST API, and web dashboard

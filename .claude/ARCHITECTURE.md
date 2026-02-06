@@ -173,6 +173,120 @@ let lamports = (amount_sol * LAMPORTS_PER_SOL as f64) as u64;
 
 ---
 
+### 5. Bitcoin Core (regtest)
+
+**Source**: Bitcoin Core
+**Repository**: https://github.com/bitcoin/bitcoin
+**Binary**: `bitcoind`
+
+#### What It Is
+
+Bitcoin Core in regtest mode provides a fully controlled local Bitcoin blockchain for development. Unlike testnet, regtest produces blocks on demand and starts with no pre-existing chain.
+
+#### How Chain Forge Uses It
+
+Chain Forge spawns `bitcoind` with regtest configuration:
+
+```rust
+let child = Command::new("bitcoind")
+    .arg("-regtest")
+    .arg("-rpcport=18443")
+    .arg("-rpcuser=...")
+    .arg("-rpcpassword=...")
+    .arg("-daemon=0")
+    .spawn()?;
+```
+
+**Process Lifecycle:**
+1. Spawn bitcoind in regtest mode
+2. Wait for RPC to be ready
+3. Create a `chain-forge` wallet (descriptor wallet)
+4. Mine initial blocks to a wallet address (generates spendable coinbase)
+5. Import account descriptors (`wpkh(WIF)`) into wallet
+6. Fund accounts via `sendtoaddress` from wallet balance
+7. Mine a confirmation block
+8. Keep process alive, kill on shutdown
+
+#### Key Differences from Solana
+
+- **Mining required**: Bitcoin needs blocks mined to confirm transactions and generate funds
+- **Wallet-based**: Accounts are imported as descriptors into a wallet, not standalone
+- **UTXO model**: No account balances; funds tracked as unspent transaction outputs
+- **Descriptor import with `"timestamp": "now"`**: Wallet does not rescan for pre-import transactions
+
+### 6. Bitcoin RPC Client
+
+**Crate**: `bitcoincore-rpc`
+**Version**: 0.19
+
+#### How Chain Forge Uses It
+
+```rust
+use bitcoincore_rpc::{Auth, Client, RpcApi};
+
+let client = Client::new(&wallet_url, Auth::UserPass(user, password))?;
+
+// Mine blocks
+client.generate_to_address(101, &address)?;
+
+// Send BTC
+client.send_to_address(&addr, amount, ...)?;
+
+// Raw RPC calls for advanced operations
+let txs: Vec<Value> = client.call("listtransactions", &[json!("*"), json!(100)])?;
+```
+
+### 7. REST API Server
+
+**Crate**: `chain-forge-api-server`
+**Binary**: `cf-api`
+**Framework**: Axum + Tokio
+
+#### What It Is
+
+An HTTP REST API that provides unified access to all registered blockchain nodes. It powers the web dashboard and can be used for custom integrations.
+
+#### Key Design Decisions
+
+- **Axum framework**: Lightweight, async, tower-compatible
+- **CORS permissive**: Allows all origins so the dashboard (different port) can communicate
+- **Node registry**: Shared JSON-based registry tracks all running nodes across chains
+- **Chain-agnostic endpoints**: Same URL patterns for Solana and Bitcoin; handlers branch on `ChainType`
+
+#### Endpoints (11 total)
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/v1/nodes` | List all registered nodes |
+| GET | `/api/v1/nodes/{id}` | Get node details |
+| POST | `/api/v1/nodes` | Start node (returns CLI command) |
+| DELETE | `/api/v1/nodes/{id}` | Mark node stopped |
+| GET | `/api/v1/nodes/{id}/accounts` | Accounts with live balances |
+| POST | `/api/v1/nodes/{id}/fund` | Fund an account |
+| GET | `/api/v1/nodes/{id}/transactions` | Recent transactions |
+| GET | `/api/v1/nodes/{id}/transactions/{sig}` | Transaction detail |
+| POST | `/api/v1/health` | Health check all nodes |
+| POST | `/api/v1/registry/cleanup` | Remove stopped nodes |
+
+### 8. Web Dashboard
+
+**Location**: `development/dashboard/`
+**Tech Stack**: React 18, TypeScript, Vite, TailwindCSS, React Query
+
+#### What It Is
+
+A real-time web interface for monitoring and managing blockchain nodes. It communicates with the REST API server.
+
+#### Architecture
+
+- **Dev server**: Vite on port 5173, proxies `/api` requests to port 3001
+- **State management**: React Query with auto-refresh (5s for nodes, 10s for transactions)
+- **Pages**: Dashboard (node grid) and NodeDetail (accounts + transactions tabs)
+- **Components**: NodeGrid, NodeCard, NewNodeForm, AccountsList, TransactionsList, NodeStatus
+- **Chain-aware UI**: Displays SOL/BTC units, Signature/TxID labels, Slot/Block headers
+
+---
+
 ## Account Funding Mechanisms
 
 ### Current Implementation: Post-Startup Airdrops
@@ -553,43 +667,46 @@ provider.restore_snapshot("test-state")?;
 
 1. **Account Generation**
    - Uses BIP39 to create mnemonic
-   - Derives keys via BIP44 (m/44'/501'/n'/0')
-   - Creates Solana keypairs
-   - Saves to `~/.chain-forge/`
+   - Derives keys via BIP44 (Solana: `m/44'/501'/n'/0'`, Bitcoin: `m/84'/1'/0'/0/n`)
+   - Creates chain-specific keypairs
+   - Saves to `~/.chain-forge/{chain}/instances/{id}/accounts.json`
 
-2. **Validator Management**
-   - Spawns `solana-test-validator` binary
-   - Monitors process health
+2. **Node Management**
+   - Spawns `solana-test-validator` or `bitcoind` as subprocess
+   - Registers nodes in shared registry (`~/.chain-forge/registry.json`)
+   - Monitors process health via RPC
    - Cleans up on exit
 
 3. **Account Funding**
-   - Waits for validator readiness
-   - Calls `request_airdrop()` via RPC
-   - Updates account balances
-   - Saves updated accounts
+   - Solana: Airdrops via RPC after validator is ready
+   - Bitcoin: Mines blocks for wallet funds, sends to each account, mines confirmation block
 
-4. **User Interface**
-   - CLI: Easy commands for common tasks
-   - TypeScript: Programmatic access
-   - Both: Wrap the same core functionality
+4. **User Interfaces**
+   - **CLI**: `cf-solana` and `cf-bitcoin` binaries for direct usage
+   - **TypeScript**: `@chain-forge/solana` NPM package for programmatic access
+   - **REST API**: `cf-api` server exposing all operations over HTTP
+   - **Web Dashboard**: React app for visual monitoring and management
 
 ### Key Technologies
 
-1. **`solana-test-validator`** - The actual blockchain
-2. **`solana-client`** - RPC communication
-3. **`bip39`** - Mnemonic generation
-4. **`ed25519-dalek`** - Cryptographic operations
-5. **`tokio`** - Async runtime
+1. **`solana-test-validator`** - Local Solana blockchain
+2. **`bitcoind` (regtest)** - Local Bitcoin blockchain
+3. **`solana-client`** / **`bitcoincore-rpc`** - RPC communication
+4. **`bip39`** - Mnemonic generation
+5. **`ed25519-dalek`** - Cryptographic operations (Solana + Bitcoin)
+6. **`axum`** - REST API framework
+7. **React + Vite** - Web dashboard
+8. **`tokio`** - Async runtime
 
 ### Design Philosophy
 
 > **Wrap, Don't Reimplement**
 
 Chain Forge doesn't re-implement blockchain logic. Instead:
-- ✅ Use official binaries
-- ✅ Use official SDKs
-- ✅ Use standard protocols (BIP39/44)
-- ✅ Focus on developer experience layer
+- Use official binaries (`solana-test-validator`, `bitcoind`)
+- Use official SDKs (`solana-client`, `bitcoincore-rpc`)
+- Use standard protocols (BIP39/44)
+- Focus on developer experience layer (CLI, API, Dashboard)
 
 This keeps the tool maintainable, reliable, and always compatible with the latest blockchain versions.
 
@@ -599,11 +716,14 @@ This keeps the tool maintainable, reliable, and always compatible with the lates
 
 - [Solana Documentation](https://docs.solana.com/)
 - [Solana Test Validator Guide](https://docs.solana.com/developing/test-validator)
+- [Bitcoin Core RPC Documentation](https://developer.bitcoin.org/reference/rpc/)
 - [BIP39 Specification](https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki)
 - [BIP44 Specification](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki)
+- [BIP84 Specification](https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki) (Native SegWit derivation)
 - [Foundry Book](https://book.getfoundry.sh/)
+- [Axum Web Framework](https://docs.rs/axum)
 
 ---
 
-**Last Updated**: January 2026
+**Last Updated**: February 2026
 **Version**: 0.1.0

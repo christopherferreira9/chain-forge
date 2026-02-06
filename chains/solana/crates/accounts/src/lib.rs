@@ -197,10 +197,20 @@ pub struct AccountsStorage {
 }
 
 impl AccountsStorage {
-    /// Create a new storage manager
+    /// Create a new storage manager (uses default path under data_dir/solana/accounts.json)
     pub fn new(data_dir: &Path) -> Self {
         let accounts_file = data_dir.join("solana").join("accounts.json");
         Self { accounts_file }
+    }
+
+    /// Create a storage manager with a specific file path
+    pub fn with_path(accounts_file: std::path::PathBuf) -> Self {
+        Self { accounts_file }
+    }
+
+    /// Get the accounts file path
+    pub fn accounts_file(&self) -> &Path {
+        &self.accounts_file
     }
 
     /// Save accounts to file
