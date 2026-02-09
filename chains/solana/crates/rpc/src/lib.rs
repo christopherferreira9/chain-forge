@@ -1,11 +1,45 @@
 use chain_forge_common::{ChainError, Result};
 use chain_forge_solana_accounts::SolanaAccount;
-use solana_client::rpc_client::RpcClient;
+use solana_client::rpc_client::{GetConfirmedSignaturesForAddress2Config, RpcClient};
+use solana_client::rpc_config::RpcTransactionConfig;
 use solana_sdk::{
     commitment_config::CommitmentConfig, native_token::LAMPORTS_PER_SOL, pubkey::Pubkey,
+    signature::Signature,
 };
+use solana_transaction_status_client_types::UiTransactionEncoding;
 use std::str::FromStr;
 use std::time::Duration;
+
+/// A simplified transaction signature info suitable for API serialization
+#[derive(Debug, Clone)]
+pub struct TransactionSignatureInfo {
+    pub signature: String,
+    pub slot: u64,
+    pub err: Option<String>,
+    pub memo: Option<String>,
+    pub block_time: Option<i64>,
+    pub confirmation_status: Option<String>,
+}
+
+/// Balance change for an account in a transaction
+#[derive(Debug, Clone)]
+pub struct BalanceChange {
+    pub account: String,
+    pub before: f64,
+    pub after: f64,
+    pub change: f64,
+}
+
+/// Detailed transaction information
+#[derive(Debug, Clone)]
+pub struct TransactionDetail {
+    pub signature: String,
+    pub slot: u64,
+    pub block_time: Option<i64>,
+    pub fee: f64,
+    pub err: Option<String>,
+    pub balance_changes: Vec<BalanceChange>,
+}
 
 /// Wrapper around Solana RPC client
 pub struct SolanaRpcClient {
@@ -249,6 +283,120 @@ impl SolanaRpcClient {
             .map_err(|e| ChainError::Rpc(format!("Failed to get version: {}", e)))?;
 
         Ok(version.solana_core)
+    }
+
+    /// Get recent transaction signatures for an address
+    pub fn get_signatures_for_address(
+        &self,
+        address: &str,
+        limit: Option<usize>,
+    ) -> Result<Vec<TransactionSignatureInfo>> {
+        let pubkey = Pubkey::from_str(address)
+            .map_err(|e| ChainError::Rpc(format!("Invalid public key: {}", e)))?;
+
+        let config = GetConfirmedSignaturesForAddress2Config {
+            before: None,
+            until: None,
+            limit: Some(limit.unwrap_or(20)),
+            commitment: Some(CommitmentConfig::confirmed()),
+        };
+
+        let signatures = self
+            .client
+            .get_signatures_for_address_with_config(&pubkey, config)
+            .map_err(|e| ChainError::Rpc(format!("Failed to get signatures: {}", e)))?;
+
+        Ok(signatures
+            .into_iter()
+            .map(|sig| TransactionSignatureInfo {
+                signature: sig.signature,
+                slot: sig.slot,
+                err: sig.err.map(|e| format!("{:?}", e)),
+                memo: sig.memo,
+                block_time: sig.block_time,
+                confirmation_status: sig
+                    .confirmation_status
+                    .map(|s| format!("{:?}", s).to_lowercase()),
+            })
+            .collect())
+    }
+
+    /// Get detailed transaction information by signature
+    pub fn get_transaction(&self, signature_str: &str) -> Result<TransactionDetail> {
+        let signature = Signature::from_str(signature_str)
+            .map_err(|e| ChainError::Rpc(format!("Invalid signature: {}", e)))?;
+
+        let config = RpcTransactionConfig {
+            encoding: Some(UiTransactionEncoding::JsonParsed),
+            commitment: Some(CommitmentConfig::confirmed()),
+            max_supported_transaction_version: Some(0),
+        };
+
+        let tx = self
+            .client
+            .get_transaction_with_config(&signature, config)
+            .map_err(|e| ChainError::Rpc(format!("Failed to get transaction: {}", e)))?;
+
+        let slot = tx.slot;
+        let block_time = tx.block_time;
+
+        let (fee, err, balance_changes) = if let Some(meta) = tx.transaction.meta {
+            let fee = meta.fee as f64 / LAMPORTS_PER_SOL as f64;
+            let err = meta.err.map(|e| format!("{:?}", e));
+
+            // Extract account keys from the transaction
+            let account_keys: Vec<String> = match &tx.transaction.transaction {
+                solana_transaction_status_client_types::EncodedTransaction::Json(ui_tx) => {
+                    match &ui_tx.message {
+                        solana_transaction_status_client_types::UiMessage::Parsed(parsed) => parsed
+                            .account_keys
+                            .iter()
+                            .map(|k| k.pubkey.clone())
+                            .collect(),
+                        solana_transaction_status_client_types::UiMessage::Raw(raw) => {
+                            raw.account_keys.clone()
+                        }
+                    }
+                }
+                _ => Vec::new(),
+            };
+
+            // Build balance changes by comparing pre/post balances
+            let pre = meta.pre_balances;
+            let post = meta.post_balances;
+            let changes: Vec<BalanceChange> = account_keys
+                .iter()
+                .enumerate()
+                .filter_map(|(i, key)| {
+                    let before_lamports = pre.get(i).copied().unwrap_or(0);
+                    let after_lamports = post.get(i).copied().unwrap_or(0);
+                    if before_lamports == after_lamports {
+                        return None;
+                    }
+                    let before = before_lamports as f64 / LAMPORTS_PER_SOL as f64;
+                    let after = after_lamports as f64 / LAMPORTS_PER_SOL as f64;
+                    Some(BalanceChange {
+                        account: key.clone(),
+                        before,
+                        after,
+                        change: after - before,
+                    })
+                })
+                .collect();
+
+            (fee, err, changes)
+        } else {
+            (0.0, None, Vec::new())
+        };
+
+        Ok(TransactionDetail {
+            signature: signature_str.to_string(),
+            slot,
+            block_time,
+            fee,
+            err,
+            balance_changes,
+        })
     }
 
     /// Get the inner RPC client for advanced operations

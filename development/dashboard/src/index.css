@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom scrollbar for dark mode */
+.dark {
+  color-scheme: dark;
+}
+
+/* Smooth transitions for theme switching */
+* {
+  transition-property: background-color, border-color;
+  transition-duration: 200ms;
+  transition-timing-function: ease-out;
+}
+
+/* Disable transitions on initial load */
+html:not(.loaded) * {
+  transition: none !important;
+}

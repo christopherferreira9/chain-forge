@@ -1,6 +1,8 @@
 use chain_forge_bitcoin_accounts::{AccountGenerator, AccountsStorage, BitcoinAccount};
 use chain_forge_bitcoin_rpc::BitcoinRpcClient;
-use chain_forge_common::{ChainError, ChainProvider, Result};
+use chain_forge_common::{
+    ChainError, ChainProvider, ChainType, NodeInfo, NodeRegistry, NodeStatus, Result,
+};
 use chain_forge_config::Config;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
@@ -15,6 +17,8 @@ use std::os::unix::process::CommandExt;
 pub struct InstanceInfo {
     /// Instance ID
     pub instance_id: String,
+    /// Human-readable name for the instance
+    pub name: Option<String>,
     /// RPC URL for this instance
     pub rpc_url: String,
     /// RPC port
@@ -25,6 +29,8 @@ pub struct InstanceInfo {
     pub rpc_user: String,
     /// RPC password
     pub rpc_password: String,
+    /// Number of accounts
+    pub accounts_count: u32,
     /// Whether the instance is currently running (may be stale)
     pub running: bool,
 }
@@ -99,6 +105,8 @@ pub struct BitcoinConfig {
     pub verbose: bool,
     /// Instance ID for isolation (allows multiple nodes with separate state)
     pub instance_id: String,
+    /// Human-readable name for the instance
+    pub name: Option<String>,
 }
 
 impl Default for BitcoinConfig {
@@ -128,6 +136,7 @@ impl BitcoinConfig {
             data_dir,
             verbose: false,
             instance_id: instance_id.to_string(),
+            name: None,
         }
     }
 
@@ -157,6 +166,8 @@ pub struct BitcoinProvider {
     accounts: Vec<BitcoinAccount>,
     bitcoind_process: Arc<Mutex<Option<Child>>>,
     storage: AccountsStorage,
+    /// Whether to keep instance data on stop (default: false)
+    keep_data: bool,
 }
 
 impl BitcoinProvider {
@@ -182,7 +193,13 @@ impl BitcoinProvider {
             accounts: Vec::new(),
             bitcoind_process: Arc::new(Mutex::new(None)),
             storage,
+            keep_data: false,
         }
+    }
+
+    /// Set whether to keep instance data on stop
+    pub fn set_keep_data(&mut self, keep: bool) {
+        self.keep_data = keep;
     }
 
     /// Generate accounts for this instance
@@ -230,14 +247,37 @@ impl BitcoinProvider {
     fn save_instance_info(&self) -> Result<()> {
         let info = InstanceInfo {
             instance_id: self.config.instance_id.clone(),
+            name: self.config.name.clone(),
             rpc_url: self.config.rpc_url.clone(),
             rpc_port: self.config.rpc_port,
             p2p_port: self.config.p2p_port,
             rpc_user: self.config.rpc_user.clone(),
             rpc_password: self.config.rpc_password.clone(),
+            accounts_count: self.config.accounts,
             running: true,
         };
         info.save()
+    }
+
+    /// Register this node with the global registry
+    fn register_with_registry(&self) -> Result<()> {
+        let registry = NodeRegistry::new();
+        let node = NodeInfo::new(
+            ChainType::Bitcoin,
+            &self.config.instance_id,
+            self.config.name.clone(),
+            self.config.rpc_url.clone(),
+            self.config.rpc_port,
+            self.config.accounts,
+        );
+        registry.register(node)
+    }
+
+    /// Unregister this node from the global registry
+    fn unregister_from_registry(&self) -> Result<()> {
+        let registry = NodeRegistry::new();
+        let node_id = NodeRegistry::node_id(ChainType::Bitcoin, &self.config.instance_id);
+        registry.update_status(&node_id, NodeStatus::Stopped)
     }
 
     /// Start the bitcoind process in regtest mode
@@ -433,12 +473,26 @@ impl ChainProvider for BitcoinProvider {
                     println!("📍 Mining address: {}", &mining_address[..20]);
 
                     // Calculate how many blocks to mine for sufficient funds
-                    // Each coinbase gives 50 BTC, needs 100 confirmations to be spendable
-                    // We need: num_accounts * initial_balance BTC (fund ALL accounts)
-                    let total_btc_needed = accounts_vec.len() as f64 * initial_balance;
-                    let coinbases_needed = (total_btc_needed / 50.0).ceil() as u32;
-                    // Mine 100 blocks for maturity + enough blocks for spendable coinbases
-                    let blocks_to_mine = 100 + coinbases_needed.max(1);
+                    // Each coinbase needs 100 confirmations to be spendable
+                    // Plus a fee buffer (~0.001 BTC per transaction) for sendtoaddress fees
+                    // On regtest, block reward halves every 150 blocks (50 -> 25 -> 12.5...)
+                    let fee_buffer = accounts_vec.len() as f64 * 0.001;
+                    let total_btc_needed =
+                        accounts_vec.len() as f64 * initial_balance + fee_buffer;
+
+                    let mut accumulated = 0.0;
+                    let mut coinbase_blocks = 0u32;
+                    while accumulated < total_btc_needed {
+                        let era = coinbase_blocks / 150;
+                        let reward = 50.0 / (1u64 << era) as f64;
+                        if reward < 1e-8 {
+                            break;
+                        }
+                        accumulated += reward;
+                        coinbase_blocks += 1;
+                    }
+                    // 100 extra blocks so the earliest coinbase reaches maturity
+                    let blocks_to_mine = 100 + coinbase_blocks.max(1);
 
                     println!(
                         "⛏️  Mining {} initial blocks (this may take a moment)...",
@@ -450,8 +504,10 @@ impl ChainProvider for BitcoinProvider {
                     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
 
                     // Check wallet balance before funding
+                    // Account for transaction fees (~0.001 BTC per sendtoaddress call)
                     let wallet_balance = wallet_client.get_wallet_balance()?;
                     let needed = accounts_vec.len() as f64 * initial_balance;
+                    let needed_with_fees = needed + fee_buffer;
                     println!(
                         "   Wallet balance: {} BTC (need {} BTC for {} accounts)",
                         wallet_balance,
@@ -459,10 +515,10 @@ impl ChainProvider for BitcoinProvider {
                         accounts_vec.len()
                     );
 
-                    if wallet_balance < needed {
+                    if wallet_balance < needed_with_fees {
                         return Err(ChainError::Other(format!(
-                            "Insufficient wallet balance: {} BTC available, {} BTC needed",
-                            wallet_balance, needed
+                            "Insufficient wallet balance: {} BTC available, ~{:.4} BTC needed (including tx fees)",
+                            wallet_balance, needed_with_fees
                         )));
                     }
 
@@ -528,7 +584,17 @@ impl ChainProvider for BitcoinProvider {
         self.rpc_client = Some(result.0);
         self.accounts = result.1;
 
-        println!("🎉 Bitcoin regtest node is running!");
+        // Register with global node registry
+        if let Err(e) = self.register_with_registry() {
+            eprintln!("Warning: Failed to register with node registry: {}", e);
+        }
+
+        let instance_name = self
+            .config
+            .name
+            .as_ref()
+            .unwrap_or(&self.config.instance_id);
+        println!("🎉 Bitcoin regtest node '{}' is running!", instance_name);
         println!("   RPC URL: {}", self.config.rpc_url);
         println!();
 
@@ -545,9 +611,19 @@ impl ChainProvider for BitcoinProvider {
                 ChainError::NodeManagement(format!("Failed to wait for bitcoind: {}", e))
             })?;
 
+            // Unregister from global node registry
+            if let Err(e) = self.unregister_from_registry() {
+                eprintln!("Warning: Failed to unregister from node registry: {}", e);
+            }
+
             // Mark instance as stopped
             if let Ok(mut info) = InstanceInfo::load(&self.config.instance_id) {
                 let _ = info.mark_stopped();
+            }
+
+            // Clean up instance data unless keep_data is set
+            if !self.keep_data {
+                let _ = self.clear_instance_data();
             }
 
             println!(
@@ -633,6 +709,7 @@ mod tests {
             data_dir: PathBuf::from("/tmp/bitcoin-test"),
             verbose: false,
             instance_id: "test".to_string(),
+            name: None,
         };
 
         let provider = BitcoinProvider::with_config(config);
@@ -662,5 +739,127 @@ mod tests {
         let accounts = provider.get_accounts().unwrap();
         // Should return empty accounts if not started
         assert_eq!(accounts.len(), 0);
+    }
+
+    #[test]
+    fn test_config_with_instance() {
+        let config = BitcoinConfig::with_instance("test-instance");
+        assert_eq!(config.instance_id, "test-instance");
+        assert!(config.name.is_none());
+        // Data dir should be instance-specific
+        assert!(config
+            .data_dir
+            .ends_with("bitcoin/instances/test-instance/regtest-data"));
+    }
+
+    #[test]
+    fn test_config_with_name() {
+        let mut config = BitcoinConfig::with_instance("btc-dev");
+        config.name = Some("Bitcoin Dev Node".to_string());
+        assert_eq!(config.instance_id, "btc-dev");
+        assert_eq!(config.name, Some("Bitcoin Dev Node".to_string()));
+    }
+
+    #[test]
+    fn test_instance_paths() {
+        let config = BitcoinConfig::with_instance("my-instance");
+        let instance_dir = config.instance_dir();
+        assert!(instance_dir.ends_with("bitcoin/instances/my-instance"));
+
+        let accounts_file = config.accounts_file();
+        assert!(accounts_file.ends_with("bitcoin/instances/my-instance/accounts.json"));
+
+        let instance_info_file = config.instance_info_file();
+        assert!(instance_info_file.ends_with("bitcoin/instances/my-instance/instance.json"));
+    }
+
+    #[test]
+    fn test_provider_with_instance() {
+        let provider = BitcoinProvider::with_instance("my-test-instance");
+        assert!(!provider.is_running());
+        assert_eq!(provider.get_rpc_url(), "http://127.0.0.1:18443");
+    }
+
+    #[test]
+    fn test_keep_data_flag() {
+        let mut provider = BitcoinProvider::new();
+        // Default should be false
+        assert!(!provider.keep_data);
+
+        provider.set_keep_data(true);
+        assert!(provider.keep_data);
+
+        provider.set_keep_data(false);
+        assert!(!provider.keep_data);
+    }
+
+    #[test]
+    fn test_instance_info_serialization() {
+        let info = InstanceInfo {
+            instance_id: "test".to_string(),
+            name: Some("Test Bitcoin Node".to_string()),
+            rpc_url: "http://127.0.0.1:18443".to_string(),
+            rpc_port: 18443,
+            p2p_port: 18444,
+            rpc_user: "chainforge".to_string(),
+            rpc_password: "chainforge".to_string(),
+            accounts_count: 10,
+            running: true,
+        };
+
+        // Serialize to JSON
+        let json = serde_json::to_string(&info).unwrap();
+        assert!(json.contains("\"instance_id\":\"test\""));
+        assert!(json.contains("\"name\":\"Test Bitcoin Node\""));
+        assert!(json.contains("\"running\":true"));
+        assert!(json.contains("\"accounts_count\":10"));
+
+        // Deserialize back
+        let deserialized: InstanceInfo = serde_json::from_str(&json).unwrap();
+        assert_eq!(deserialized.instance_id, "test");
+        assert_eq!(deserialized.name, Some("Test Bitcoin Node".to_string()));
+        assert_eq!(deserialized.rpc_url, "http://127.0.0.1:18443");
+        assert_eq!(deserialized.rpc_port, 18443);
+        assert_eq!(deserialized.p2p_port, 18444);
+        assert_eq!(deserialized.accounts_count, 10);
+        assert!(deserialized.running);
+    }
+
+    #[test]
+    fn test_instance_info_without_name() {
+        let info = InstanceInfo {
+            instance_id: "default".to_string(),
+            name: None,
+            rpc_url: "http://127.0.0.1:18443".to_string(),
+            rpc_port: 18443,
+            p2p_port: 18444,
+            rpc_user: "user".to_string(),
+            rpc_password: "pass".to_string(),
+            accounts_count: 5,
+            running: false,
+        };
+
+        let json = serde_json::to_string(&info).unwrap();
+        let deserialized: InstanceInfo = serde_json::from_str(&json).unwrap();
+
+        assert_eq!(deserialized.instance_id, "default");
+        assert!(deserialized.name.is_none());
+        assert!(!deserialized.running);
+    }
+
+    #[test]
+    fn test_different_instance_configs() {
+        let config1 = BitcoinConfig::with_instance("dev");
+        let config2 = BitcoinConfig::with_instance("test");
+
+        // Each should have its own instance directory
+        assert_ne!(config1.instance_dir(), config2.instance_dir());
+        assert_ne!(config1.accounts_file(), config2.accounts_file());
+        assert_ne!(config1.instance_info_file(), config2.instance_info_file());
+        assert_ne!(config1.data_dir, config2.data_dir);
+
+        // But same default ports
+        assert_eq!(config1.rpc_port, config2.rpc_port);
+        assert_eq!(config1.p2p_port, config2.p2p_port);
     }
 }

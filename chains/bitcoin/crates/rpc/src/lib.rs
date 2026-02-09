@@ -3,7 +3,42 @@ use bitcoincore_rpc::bitcoin::{Address, Amount};
 use bitcoincore_rpc::{Auth, Client, RpcApi};
 use chain_forge_bitcoin_accounts::BitcoinAccount;
 use chain_forge_common::{ChainError, Result};
+use serde::{Deserialize, Serialize};
 use std::time::Duration;
+
+/// Transaction info from Bitcoin wallet (from `listtransactions`)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BitcoinTransactionInfo {
+    pub txid: String,
+    pub address: String,
+    pub category: String,
+    pub amount: f64,
+    pub label: String,
+    pub confirmations: i64,
+    pub block_height: u64,
+    pub block_time: Option<i64>,
+}
+
+/// Detail entry within a transaction (from `gettransaction` details array)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BitcoinTxDetailEntry {
+    pub address: String,
+    pub category: String,
+    pub amount: f64,
+    pub label: Option<String>,
+}
+
+/// Detailed transaction info (from `gettransaction`)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BitcoinTransactionDetail {
+    pub txid: String,
+    pub amount: f64,
+    pub fee: Option<f64>,
+    pub confirmations: i64,
+    pub block_height: u64,
+    pub block_time: Option<i64>,
+    pub details: Vec<BitcoinTxDetailEntry>,
+}
 
 /// Bitcoin Core RPC client wrapper
 pub struct BitcoinRpcClient {
@@ -484,6 +519,91 @@ impl BitcoinRpcClient {
         Ok(address)
     }
 
+    /// List recent wallet transactions
+    ///
+    /// Uses `listtransactions "*" count 0 true` to get all labeled transactions.
+    /// Filters out "generate" and "immature" categories (mining rewards) to only
+    /// return send/receive transactions.
+    pub fn list_transactions(&self, count: usize) -> Result<Vec<BitcoinTransactionInfo>> {
+        let result: Vec<serde_json::Value> = self
+            .client
+            .call(
+                "listtransactions",
+                &[
+                    serde_json::json!("*"),   // all labels
+                    serde_json::json!(count), // count
+                    serde_json::json!(0),     // skip
+                    serde_json::json!(true),  // include_watchonly
+                ],
+            )
+            .map_err(|e| ChainError::Rpc(format!("Failed to list transactions: {}", e)))?;
+
+        let transactions = result
+            .into_iter()
+            .filter_map(|entry| {
+                let category = entry["category"].as_str().unwrap_or("").to_string();
+                // Filter out mining-related categories
+                if category == "generate" || category == "immature" {
+                    return None;
+                }
+
+                Some(BitcoinTransactionInfo {
+                    txid: entry["txid"].as_str().unwrap_or("").to_string(),
+                    address: entry["address"].as_str().unwrap_or("").to_string(),
+                    category,
+                    amount: entry["amount"].as_f64().unwrap_or(0.0),
+                    label: entry["label"].as_str().unwrap_or("").to_string(),
+                    confirmations: entry["confirmations"].as_i64().unwrap_or(0),
+                    block_height: entry["blockheight"].as_u64().unwrap_or(0),
+                    block_time: entry["blocktime"].as_i64(),
+                })
+            })
+            .collect();
+
+        Ok(transactions)
+    }
+
+    /// Get detailed information about a specific transaction
+    ///
+    /// Uses `gettransaction txid true` to get full details including
+    /// per-address balance changes and fee information.
+    pub fn get_transaction_detail(&self, txid: &str) -> Result<BitcoinTransactionDetail> {
+        let result: serde_json::Value = self
+            .client
+            .call(
+                "gettransaction",
+                &[
+                    serde_json::json!(txid),
+                    serde_json::json!(true), // include_watchonly
+                ],
+            )
+            .map_err(|e| ChainError::Rpc(format!("Failed to get transaction {}: {}", txid, e)))?;
+
+        let details = result["details"]
+            .as_array()
+            .map(|arr| {
+                arr.iter()
+                    .map(|d| BitcoinTxDetailEntry {
+                        address: d["address"].as_str().unwrap_or("").to_string(),
+                        category: d["category"].as_str().unwrap_or("").to_string(),
+                        amount: d["amount"].as_f64().unwrap_or(0.0),
+                        label: d["label"].as_str().map(|s| s.to_string()),
+                    })
+                    .collect()
+            })
+            .unwrap_or_default();
+
+        Ok(BitcoinTransactionDetail {
+            txid: result["txid"].as_str().unwrap_or(txid).to_string(),
+            amount: result["amount"].as_f64().unwrap_or(0.0),
+            fee: result["fee"].as_f64(),
+            confirmations: result["confirmations"].as_i64().unwrap_or(0),
+            block_height: result["blockheight"].as_u64().unwrap_or(0),
+            block_time: result["blocktime"].as_i64(),
+            details,
+        })
+    }
+
     /// Get the inner RPC client for advanced operations
     pub fn inner(&self) -> &Client {
         &self.client
@@ -526,5 +646,168 @@ mod tests {
         .unwrap();
         // Should return false when no node is running
         assert!(!client.is_node_running());
+    }
+
+    #[test]
+    fn test_transaction_info_serialization() {
+        let tx = BitcoinTransactionInfo {
+            txid: "abc123".to_string(),
+            address: "bcrt1qtest".to_string(),
+            category: "receive".to_string(),
+            amount: 1.5,
+            label: "account-0".to_string(),
+            confirmations: 6,
+            block_height: 101,
+            block_time: Some(1700000000),
+        };
+
+        let json = serde_json::to_value(&tx).unwrap();
+        assert_eq!(json["txid"], "abc123");
+        assert_eq!(json["address"], "bcrt1qtest");
+        assert_eq!(json["category"], "receive");
+        assert_eq!(json["amount"], 1.5);
+        assert_eq!(json["label"], "account-0");
+        assert_eq!(json["confirmations"], 6);
+        assert_eq!(json["block_height"], 101);
+        assert_eq!(json["block_time"], 1700000000);
+    }
+
+    #[test]
+    fn test_transaction_info_deserialization() {
+        let json = serde_json::json!({
+            "txid": "def456",
+            "address": "bcrt1qaddr",
+            "category": "send",
+            "amount": -0.5,
+            "label": "account-1",
+            "confirmations": 3,
+            "block_height": 200,
+            "block_time": 1700001000
+        });
+
+        let tx: BitcoinTransactionInfo = serde_json::from_value(json).unwrap();
+        assert_eq!(tx.txid, "def456");
+        assert_eq!(tx.category, "send");
+        assert_eq!(tx.amount, -0.5);
+        assert_eq!(tx.confirmations, 3);
+    }
+
+    #[test]
+    fn test_transaction_info_optional_block_time() {
+        let tx = BitcoinTransactionInfo {
+            txid: "unconfirmed".to_string(),
+            address: "bcrt1qtest".to_string(),
+            category: "receive".to_string(),
+            amount: 0.1,
+            label: "".to_string(),
+            confirmations: 0,
+            block_height: 0,
+            block_time: None,
+        };
+
+        let json = serde_json::to_value(&tx).unwrap();
+        assert!(json["block_time"].is_null());
+        assert_eq!(tx.confirmations, 0);
+        assert_eq!(tx.block_height, 0);
+    }
+
+    #[test]
+    fn test_transaction_detail_serialization() {
+        let detail = BitcoinTransactionDetail {
+            txid: "abc123".to_string(),
+            amount: -1.0,
+            fee: Some(-0.00001),
+            confirmations: 10,
+            block_height: 150,
+            block_time: Some(1700000000),
+            details: vec![
+                BitcoinTxDetailEntry {
+                    address: "bcrt1qsender".to_string(),
+                    category: "send".to_string(),
+                    amount: -1.0,
+                    label: Some("account-0".to_string()),
+                },
+                BitcoinTxDetailEntry {
+                    address: "bcrt1qreceiver".to_string(),
+                    category: "receive".to_string(),
+                    amount: 1.0,
+                    label: Some("account-1".to_string()),
+                },
+            ],
+        };
+
+        let json = serde_json::to_value(&detail).unwrap();
+        assert_eq!(json["txid"], "abc123");
+        assert_eq!(json["fee"], -0.00001);
+        assert_eq!(json["details"].as_array().unwrap().len(), 2);
+        assert_eq!(json["details"][0]["category"], "send");
+        assert_eq!(json["details"][1]["category"], "receive");
+    }
+
+    #[test]
+    fn test_transaction_detail_optional_fee() {
+        let detail = BitcoinTransactionDetail {
+            txid: "nofee".to_string(),
+            amount: 1.0,
+            fee: None,
+            confirmations: 1,
+            block_height: 100,
+            block_time: Some(1700000000),
+            details: vec![],
+        };
+
+        let json = serde_json::to_value(&detail).unwrap();
+        assert!(json["fee"].is_null());
+        assert_eq!(detail.details.len(), 0);
+    }
+
+    #[test]
+    fn test_tx_detail_entry_optional_label() {
+        let entry = BitcoinTxDetailEntry {
+            address: "bcrt1qtest".to_string(),
+            category: "receive".to_string(),
+            amount: 0.5,
+            label: None,
+        };
+
+        let json = serde_json::to_value(&entry).unwrap();
+        assert!(json["label"].is_null());
+
+        let entry_with_label = BitcoinTxDetailEntry {
+            address: "bcrt1qtest".to_string(),
+            category: "send".to_string(),
+            amount: -0.5,
+            label: Some("my-label".to_string()),
+        };
+
+        let json = serde_json::to_value(&entry_with_label).unwrap();
+        assert_eq!(json["label"], "my-label");
+    }
+
+    #[test]
+    fn test_transaction_detail_deserialization() {
+        let json = serde_json::json!({
+            "txid": "roundtrip",
+            "amount": -2.0,
+            "fee": -0.0001,
+            "confirmations": 5,
+            "block_height": 300,
+            "block_time": 1700002000,
+            "details": [
+                {
+                    "address": "bcrt1qa",
+                    "category": "send",
+                    "amount": -2.0,
+                    "label": "acc-0"
+                }
+            ]
+        });
+
+        let detail: BitcoinTransactionDetail = serde_json::from_value(json).unwrap();
+        assert_eq!(detail.txid, "roundtrip");
+        assert_eq!(detail.fee, Some(-0.0001));
+        assert_eq!(detail.details.len(), 1);
+        assert_eq!(detail.details[0].address, "bcrt1qa");
+        assert_eq!(detail.details[0].label, Some("acc-0".to_string()));
     }
 }

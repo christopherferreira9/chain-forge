@@ -1,6 +1,10 @@
-# API Reference
+# TypeScript API Reference
 
 TypeScript API reference for `@chain-forge/solana`.
+
+::: tip Looking for the REST API?
+Chain Forge also provides a [REST API](/api/rest-api) for monitoring and controlling nodes via HTTP. This is used by the web dashboard and can be used for custom integrations.
+:::
 
 ## SolanaClient
 
@@ -442,3 +446,4 @@ Common errors:
 - [Basic Usage Guide](../typescript/basic-usage)
 - [TypeScript Examples](../examples/typescript)
 - [Solana CLI Reference](../solana/cli)
+- [REST API Reference](./rest-api) - HTTP API for the web dashboard

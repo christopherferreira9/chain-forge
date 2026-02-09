@@ -18,7 +18,13 @@ export default defineConfig({
     nav: [
       { text: 'Home', link: '/' },
       { text: 'Guide', link: '/guide/getting-started' },
-      { text: 'API', link: '/api/overview' },
+      {
+        text: 'API',
+        items: [
+          { text: 'TypeScript API', link: '/api/overview' },
+          { text: 'REST API', link: '/api/rest-api' }
+        ]
+      },
       { text: 'Examples', link: '/examples/typescript' }
     ],
 
@@ -56,6 +62,12 @@ export default defineConfig({
           { text: 'Installation', link: '/typescript/installation' },
           { text: 'Basic Usage', link: '/typescript/basic-usage' },
           { text: 'API Reference', link: '/api/overview' }
+        ]
+      },
+      {
+        text: 'REST API',
+        items: [
+          { text: 'API Reference', link: '/api/rest-api' }
         ]
       },
       {
