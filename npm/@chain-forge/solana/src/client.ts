@@ -51,6 +51,7 @@ export class SolanaClient {
       port: config.port ?? 8899,
       mnemonic: config.mnemonic ?? '',
       rpcUrl: config.rpcUrl ?? `http://localhost:${config.port ?? 8899}`,
+      instance: config.instance ?? 'default',
     };
   }
 
@@ -64,6 +65,7 @@ export class SolanaClient {
 
     const args = [
       'start',
+      '--instance', this.config.instance,
       '--accounts', this.config.accounts.toString(),
       '--balance', this.config.initialBalance.toString(),
       '--port', this.config.port.toString(),
@@ -85,8 +87,8 @@ export class SolanaClient {
         output += data.toString();
         process.stdout.write(data);
 
-        // Wait for the success message
-        if (output.includes('Solana test validator is running')) {
+        // Wait for the success message (includes instance name, e.g. "Solana test validator 'default' is running!")
+        if (output.includes('is running!') && output.includes('Solana test validator')) {
           resolve();
         }
       });
@@ -108,7 +110,7 @@ export class SolanaClient {
 
       // Timeout after 60 seconds
       setTimeout(() => {
-        if (this.validatorProcess && !output.includes('Solana test validator is running')) {
+        if (this.validatorProcess && !(output.includes('is running!') && output.includes('Solana test validator'))) {
           this.stop();
           reject(new Error('Validator startup timeout'));
         }
@@ -138,7 +140,7 @@ export class SolanaClient {
    * Get all generated accounts
    */
   async getAccounts(): Promise<SolanaAccount[]> {
-    const accountsPath = join(homedir(), '.chain-forge', 'solana', 'accounts.json');
+    const accountsPath = join(homedir(), '.chain-forge', 'solana', 'instances', this.config.instance, 'accounts.json');
 
     try {
       const data = await fs.readFile(accountsPath, 'utf-8');

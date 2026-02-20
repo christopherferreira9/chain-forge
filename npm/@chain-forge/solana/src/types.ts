@@ -30,6 +30,12 @@ export interface SolanaClientConfig {
    * @default "http://localhost:8899"
    */
   rpcUrl?: string;
+
+  /**
+   * Instance ID for isolation (matches --instance flag in cf-solana CLI)
+   * @default "default"
+   */
+  instance?: string;
 }
 
 /**
