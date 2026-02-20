@@ -155,8 +155,8 @@ export class BitcoinClient extends EventEmitter {
         output += data.toString();
         process.stdout.write(data);
 
-        // Wait for the success message indicating full initialization
-        if (!resolved && output.includes('Bitcoin regtest node is running')) {
+        // Wait for the success message (includes instance name, e.g. "Bitcoin regtest node 'default' is running!")
+        if (!resolved && output.includes('is running!') && output.includes('Bitcoin regtest node')) {
           resolved = true;
           this.emit('ready');
           resolve();
