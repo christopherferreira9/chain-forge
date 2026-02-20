@@ -1,23 +1,59 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  pull_request:
+    types: [closed]
+    branches: [main]
 
-# For releases, we don't want to cancel in-progress builds
-# Each tag should get its own complete release
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: release
   cancel-in-progress: false
 
 permissions:
   contents: write
 
 jobs:
+  check-release:
+    name: Check Release PR
+    runs-on: ubuntu-latest
+    if: >
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.title, 'Release v')
+    outputs:
+      version: ${{ steps.manifest.outputs.version }}
+      rust_crates: ${{ steps.manifest.outputs.rust_crates }}
+      npm_solana: ${{ steps.manifest.outputs.npm_solana }}
+      npm_bitcoin: ${{ steps.manifest.outputs.npm_bitcoin }}
+      bin_cf_solana: ${{ steps.manifest.outputs.bin_cf_solana }}
+      bin_cf_bitcoin: ${{ steps.manifest.outputs.bin_cf_bitcoin }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Read release manifest
+        id: manifest
+        run: |
+          if [[ ! -f .release.json ]]; then
+            echo "::error::Release manifest (.release.json) not found"
+            exit 1
+          fi
+          echo "version=$(jq -r '.version' .release.json)" >> "$GITHUB_OUTPUT"
+          echo "rust_crates=$(jq -r '.rust_crates' .release.json)" >> "$GITHUB_OUTPUT"
+          echo "npm_solana=$(jq -r '.npm_solana' .release.json)" >> "$GITHUB_OUTPUT"
+          echo "npm_bitcoin=$(jq -r '.npm_bitcoin' .release.json)" >> "$GITHUB_OUTPUT"
+          echo "bin_cf_solana=$(jq -r '.binaries["cf-solana"]' .release.json)" >> "$GITHUB_OUTPUT"
+          echo "bin_cf_bitcoin=$(jq -r '.binaries["cf-bitcoin"]' .release.json)" >> "$GITHUB_OUTPUT"
+
+          echo "### Release Manifest" >> "$GITHUB_STEP_SUMMARY"
+          echo '```json' >> "$GITHUB_STEP_SUMMARY"
+          cat .release.json >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
   build-binaries:
     name: Build Binaries
+    needs: check-release
     runs-on: ubuntu-latest
+    if: needs.check-release.outputs.bin_cf_solana == 'true' || needs.check-release.outputs.bin_cf_bitcoin == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -25,50 +61,105 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Build binary (Linux x86_64)
-        run: cargo build --release --target x86_64-unknown-linux-gnu -p chain-forge-solana-cli
+      - name: Cache cargo
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-release-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Strip binary
-        run: strip target/x86_64-unknown-linux-gnu/release/cf-solana
-
-      - name: Prepare release artifacts
+      - name: Build cf-solana (Linux x86_64)
+        if: needs.check-release.outputs.bin_cf_solana == 'true'
         run: |
+          cargo build --release -p chain-forge-solana-cli
+          strip target/release/cf-solana
           mkdir -p release
-          cp target/x86_64-unknown-linux-gnu/release/cf-solana release/cf-solana-linux-x86_64
+          cp target/release/cf-solana release/cf-solana-linux-x86_64
 
+<<<<<<< Updated upstream
       - name: Upload binary
         uses: actions/upload-artifact@v6
-        with:
-          name: cf-solana-linux-x86_64
-          path: release/cf-solana-linux-x86_64
+=======
+      - name: Build cf-bitcoin (Linux x86_64)
+        if: needs.check-release.outputs.bin_cf_bitcoin == 'true'
+        run: |
+          cargo build --release -p chain-forge-bitcoin-cli
+          strip target/release/cf-bitcoin
+          mkdir -p release
+          cp target/release/cf-bitcoin release/cf-bitcoin-linux-x86_64
 
-  create-release:
-    name: Create Release
-    needs: build-binaries
+      - name: Upload binaries
+        uses: actions/upload-artifact@v4
+>>>>>>> Stashed changes
+        with:
+          name: release-binaries
+          path: release/
+
+  publish-crates:
+    name: Publish to crates.io
+    needs: check-release
     runs-on: ubuntu-latest
+    if: needs.check-release.outputs.rust_crates == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
+<<<<<<< Updated upstream
       - name: Download artifacts
         uses: actions/download-artifact@v7
         with:
           path: artifacts
+=======
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+>>>>>>> Stashed changes
 
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/**/*
-          draft: false
-          prerelease: false
-          generate_release_notes: true
+      - name: Publish crates in dependency order
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_TOKEN }}
+        run: |
+          # Layer 0: No internal dependencies
+          cargo publish -p chain-forge-common
+          sleep 15
 
-  publish-npm:
-    name: Publish to NPM
-    needs: build-binaries
+          # Layer 1: Depends on common
+          cargo publish -p chain-forge-config
+          sleep 15
+          cargo publish -p chain-forge-cli-utils
+          sleep 15
+
+          # Layer 2: Chain-specific accounts
+          cargo publish -p chain-forge-solana-accounts
+          sleep 15
+          cargo publish -p chain-forge-bitcoin-accounts
+          sleep 15
+
+          # Layer 3: Chain-specific RPC
+          cargo publish -p chain-forge-solana-rpc
+          sleep 15
+          cargo publish -p chain-forge-bitcoin-rpc
+          sleep 15
+
+          # Layer 4: Chain-specific core
+          cargo publish -p chain-forge-solana-core
+          sleep 15
+          cargo publish -p chain-forge-bitcoin-core
+          sleep 15
+
+          # Layer 5: CLIs and API server
+          cargo publish -p chain-forge-solana-cli
+          sleep 15
+          cargo publish -p chain-forge-bitcoin-cli
+          sleep 15
+          cargo publish -p chain-forge-api-server
+
+  publish-npm-solana:
+    name: Publish @chain-forge/solana to npm
+    needs: check-release
     runs-on: ubuntu-latest
+    if: needs.check-release.outputs.npm_solana == 'true'
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -82,44 +173,83 @@ jobs:
       - name: Enable Corepack
         run: corepack enable
 
-      - name: Build TypeScript package
+      - name: Build and publish
         working-directory: npm/@chain-forge/solana
         run: |
           yarn install --immutable
           yarn build
-
-      - name: Publish to NPM
-        working-directory: npm/@chain-forge/solana
-        run: yarn npm publish --access public
+          yarn npm publish --access public
         env:
           YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  publish-crates:
-    name: Publish to crates.io
-    needs: build-binaries
+  publish-npm-bitcoin:
+    name: Publish @chain-forge/bitcoin to npm
+    needs: check-release
+    runs-on: ubuntu-latest
+    if: needs.check-release.outputs.npm_bitcoin == 'true'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Build and publish
+        working-directory: npm/@chain-forge/bitcoin
+        run: |
+          yarn install --immutable
+          yarn build
+          yarn npm publish --access public
+        env:
+          YARN_NPM_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  create-release:
+    name: Create GitHub Release
+    needs: [check-release, build-binaries, publish-crates, publish-npm-solana, publish-npm-bitcoin]
+    # Run even if optional jobs were skipped, but not if any failed
+    if: always() && needs.check-release.result == 'success' && !contains(needs.*.result, 'failure')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
-
-      - name: Publish crates
-        env:
-          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_TOKEN }}
+      - name: Create git tag
         run: |
-          # Publish in dependency order
-          cargo publish -p chain-forge-common
-          sleep 10
-          cargo publish -p chain-forge-config
-          sleep 10
-          cargo publish -p chain-forge-cli-utils
-          sleep 10
-          cargo publish -p chain-forge-solana-accounts
-          sleep 10
-          cargo publish -p chain-forge-solana-rpc
-          sleep 10
-          cargo publish -p chain-forge-solana-core
-          sleep 10
-          cargo publish -p chain-forge-solana-cli
+          VERSION="${{ needs.check-release.outputs.version }}"
+          git tag "v${VERSION}"
+          git push origin "v${VERSION}"
+
+      - name: Download binaries
+        if: needs.build-binaries.result == 'success'
+        uses: actions/download-artifact@v4
+        with:
+          name: release-binaries
+          path: artifacts
+
+      - name: Extract release notes from CHANGELOG
+        id: release_notes
+        run: |
+          VERSION="${{ needs.check-release.outputs.version }}"
+          # Extract the section for this version from CHANGELOG.md
+          # Matches from "## [X.Y.Z]" until the next "## [" or end of file
+          NOTES=$(sed -n "/^## \[${VERSION}\]/,/^## \[/{ /^## \[${VERSION}\]/d; /^## \[/d; p; }" CHANGELOG.md)
+          # Write to file for the release action
+          echo "$NOTES" > release_notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.check-release.outputs.version }}
+          name: v${{ needs.check-release.outputs.version }}
+          body_path: release_notes.md
+          files: artifacts/**/*
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
