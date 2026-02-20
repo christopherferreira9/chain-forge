@@ -8,8 +8,8 @@ rust-version.workspace = true
 [dependencies]
 chain-forge-common.workspace = true
 chain-forge-config.workspace = true
-chain-forge-bitcoin-accounts = { path = "../accounts" }
-chain-forge-bitcoin-rpc = { path = "../rpc" }
+chain-forge-bitcoin-accounts.workspace = true
+chain-forge-bitcoin-rpc.workspace = true
 bitcoin = { version = "0.32", features = ["serde"] }
 tokio.workspace = true
 eyre.workspace = true

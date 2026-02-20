@@ -381,10 +381,20 @@ impl ChainProvider for SolanaProvider {
         let node_id = NodeRegistry::node_id(ChainType::Solana, &self.config.instance_id);
         if let Ok(Some(existing)) = registry.get(&node_id) {
             if existing.status == NodeStatus::Running {
-                return Err(ChainError::NodeManagement(format!(
-                    "Instance '{}' is already running on port {}. Stop it first or use a different instance name.",
-                    self.config.instance_id, existing.rpc_port
-                )));
+                // Verify the node is actually alive by checking the RPC port
+                let rpc_client = SolanaRpcClient::new(existing.rpc_url.clone());
+                if rpc_client.is_validator_running() {
+                    return Err(ChainError::NodeManagement(format!(
+                        "Instance '{}' is already running on port {}. Stop it first or use a different instance name.",
+                        self.config.instance_id, existing.rpc_port
+                    )));
+                }
+                // Node is not actually running - stale registry entry, clean it up
+                println!(
+                    "⚠️  Cleaning up stale registry entry for instance '{}'...",
+                    self.config.instance_id
+                );
+                let _ = registry.update_status(&node_id, NodeStatus::Stopped);
             }
         }
 

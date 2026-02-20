@@ -7,7 +7,7 @@ rust-version.workspace = true
 
 [dependencies]
 chain-forge-common.workspace = true
-chain-forge-bitcoin-accounts = { path = "../accounts" }
+chain-forge-bitcoin-accounts.workspace = true
 bitcoincore-rpc = "0.19"
 bitcoin = { version = "0.32", features = ["serde"] }
 tokio.workspace = true
